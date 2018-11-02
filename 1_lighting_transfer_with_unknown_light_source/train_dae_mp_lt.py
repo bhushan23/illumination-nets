@@ -1,6 +1,10 @@
 from __future__ import print_function
 import argparse
 import os
+import sys
+sys.path.insert(0, './core')
+sys.path.insert(0, './models')
+
 import random
 import torch
 import torch.nn as nn
@@ -17,9 +21,10 @@ from torch.autograd import Function
 import math
 
 # our data loader
-import DAEDataLoader
+import DAELightTransferDataLoader as lightDL
 import gc
 
+ON_SERVER = False
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=8)
@@ -27,7 +32,7 @@ parser.add_argument('--batchSize', type=int, default=100, help='input batch size
 parser.add_argument('--niter', type=int, default=25, help='number of epochs to train for')
 parser.add_argument('--lr', type=float, default=0.0002, help='learning rate, default=0.0002')
 parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for adam. default=0.5')
-parser.add_argument('--cuda', default = True, action='store_true', help='enables cuda')
+parser.add_argument('--cuda', default = False, action='store_true', help='enables cuda')
 parser.add_argument('--ngpu', type=int, default=1, help='number of GPUs to use')
 parser.add_argument('--gpu_ids', type=int, default=0, help='ids of GPUs to use')
 parser.add_argument('--manualSeed', type=int, help='manual seed')
@@ -35,26 +40,27 @@ parser.add_argument('--epoch_iter', type=int,default=600, help='number of epochs
 parser.add_argument('--location', type = int, default=0, help ='where is the code running')
 parser.add_argument('-f',type=str,default= '', help='dummy input required for jupyter notebook')
 parser.add_argument('--modelPath', default='', help="path to model (to continue training)")
-parser.add_argument('--dirCheckpoints', default='/nfs/bigdisk/zhshu/daeout/checkpoints/IntrinsicDAE_CelebA', help='folder to model checkpoints')
-parser.add_argument('--dirImageoutput', default='/nfs/bigdisk/zhshu/daeout/images/IntrinsicDAE_CelebA', help='folder to output images')
-parser.add_argument('--dirTestingoutput', default='/nfs/bigdisk/zhshu/daeout/testing/IntrinsicDAE_CelebA', help='folder to testing results/images')
-parser.add_argument('--dirDataroot', default='/nfs/bigdisk/zhshu/data/wasp/', help='folder to dataroot')
+
+if ON_SERVER:
+    out_path  = '/nfs/bigdisk/bsonawane/daeout'
+    data_path = '/nfs/bigdisk/zhshu/data/fare/real/multipie_select_batches/'
+else:
+    out_path  = '/home/bhushan/work/thesis/Sem2/source/experiment/illumination-nets/1_lighting_transfer_with_unknown_light_source/output'
+    data_path = '/home/bhushan/work/thesis/Sem2/source/experiment/illumination-nets/data/multipie_select_batches/'
+parser.add_argument('--dirCheckpoints', default=out_path+'/checkpoints/DAE_CelebA', help='folder to model checkpoints')
+parser.add_argument('--dirImageoutput', default=out_path+'/images/DAE_CelebA', help='folder to output images')
+parser.add_argument('--dirTestingoutput', default=out_path+'/nfs/bigdisk/bsonawane/daeout/testing/DAE_CelebA', help='folder to testing results/images')
+parser.add_argument('--dirDataroot', default=data_path, help='folder to dataroot')
 parser.add_argument('--useDense', default = True, help='enables dense net architecture')
 opt = parser.parse_args()
 
-
 # size of image
 opt.imgSize=64
-opt.cuda = True
 opt.use_dropout = 0
 opt.ngf = 32
 opt.ndf = 32
-# dimensionality: shading latent code
-opt.sdim = 16
-# dimensionality: albedo latent code
-opt.tdim = 16
-# dimensionality: texture (shading*albedo) latent code
-opt.idim = opt.sdim + opt.tdim
+# dimensionality: texture latent code
+opt.idim = 16
 # dimensionality: warping grid (deformation field) latent code
 opt.wdim = 128
 # dimensionality of general latent code (before disentangling)
@@ -63,7 +69,6 @@ opt.use_gpu = True
 opt.gpu_ids = 0
 opt.ngpu = 1
 opt.nc = 3
-opt.useDense=True
 print(opt)
 
 try:
@@ -135,7 +140,6 @@ def parseSampledDataPoint(dp0_img, nc):
     dp0_img  = dp0_img.permute(0,3,1,2).contiguous()  # reshape to [batch_size, 3, img_H, img_W]
     return dp0_img
 
-
 def setCuda(*args):
     barg = []
     for arg in args: 
@@ -155,16 +159,17 @@ def setAsVariable(*args):
 import DAENet
 
 if opt.useDense:
-    encoders      = DAENet.Dense_Encoders_Intrinsic(opt)
-    decoders      = DAENet.Dense_DecodersIntegralWarper2_Intrinsic(opt)
+    encoders      = DAENet.Dense_Encoders(opt)
+    decoders      = DAENet.Dense_DecodersIntegralWarper2(opt)
 else:
-    encoders      = DAENet.Encoders_Intrinsic(opt)
-    decoders      = DAENet.DecodersIntegralWarper2_Intrinsic(opt)
+    encoders      = DAENet.Encoders(opt)
+    decoders      = DAENet.DecodersIntegralWarper2(opt)
 
 if opt.cuda:
     encoders.cuda()
     decoders.cuda()
-if not opt.modelPath=='':
+
+if not opt.modelPath == '':
     # rewrite here
     print('Reload previous model at: '+ opt.modelPath)
     encoders.load_state_dict(torch.load(opt.modelPath+'_encoders.pth'))
@@ -187,7 +192,12 @@ criterionSmoothL2   = DAENet.SelfSmoothLoss2(opt)
 
 # Training set
 TrainingData = []
-TrainingData.append(opt.dirDataroot + 'celeba_split/img_00')
+TrainingData.append(opt.dirDataroot + 'session01_01_select')
+TrainingData.append(opt.dirDataroot + 'session01_02_select')
+TrainingData.append(opt.dirDataroot + 'session01_03_select')
+TrainingData.append(opt.dirDataroot + 'session01_04_select')
+TrainingData.append(opt.dirDataroot + 'session01_05_select')
+TrainingData.append(opt.dirDataroot + 'session01_06_select')
 '''
 TrainingData.append(opt.dirDataroot + 'celeba_split/img_01')
 TrainingData.append(opt.dirDataroot + 'celeba_split/img_02')
@@ -210,13 +220,12 @@ TrainingData.append(opt.dirDataroot + 'celeba_split/img_18')
 '''
 # Testing set
 TestingData = []
-TestingData.append(opt.dirDataroot + 'celeba_split/img_19')
-
+TestingData.append(opt.dirDataroot + 'session01_07_select')
 
 # ------------ training ------------ #
 doTraining = True
 doTesting = True
-iter_mark=0
+iter_mark = 0
 for epoch in range(opt.epoch_iter):
     train_loss = 0
     train_amount = 0+1e-6
@@ -226,16 +235,19 @@ for epoch in range(opt.epoch_iter):
     for dataroot in TrainingData:
         if not doTraining:
             break
-        dataset = DAEDataLoader.DAEImageFolderResize(root=dataroot,rgb = True, resize = 64)
+
+        dataset = lightDL.FareMultipieLightingTripletsFrontal(None, root=[dataroot], transform = None, resize=64)
+                
         print('# size of the current (sub)dataset is %d' %len(dataset))
         train_amount = train_amount + len(dataset)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batchSize, shuffle=True, num_workers=int(opt.workers))
         for batch_idx, data_point in enumerate(dataloader, 0):
-            #raw_input("Press Enter to continue...")
+            # raw_input("Press Enter to continue...")
             gc.collect() # collect garbage
             ### prepare data ###
-            dp0_img = data_point
-            dp0_img =  parseSampledDataPoint(dp0_img, opt.nc)
+            dp0_img = data_point[1]
+            dp0_img = parseSampledDataPoint(dp0_img, opt.nc)
+            dp0_img = dp0_img.type(torch.cuda.FloatTensor)
             baseg = getBaseGrid(N=opt.imgSize, getbatch = True, batchSize = dp0_img.size()[0])
             zeroWarp = torch.cuda.FloatTensor(1, 2, opt.imgSize, opt.imgSize).fill_(0)
             if opt.cuda:
@@ -248,30 +260,30 @@ for epoch in range(opt.epoch_iter):
             decoders.zero_grad()
             encoders.zero_grad()
             ### forward training points: dp0
-            dp0_z, dp0_zS, dp0_zT, dp0_zW = encoders(dp0_img)
-            dp0_S, dp0_T, dp0_I, dp0_W, dp0_output, dp0_Wact = decoders(dp0_zS, dp0_zT, dp0_zW, baseg)
+            dp0_z, dp0_zI, dp0_zW = encoders(dp0_img)
+            baseg = baseg.type(torch.cuda.FloatTensor)
+            print(type(dp0_zI), type(dp0_zW), type(baseg))
+            dp0_I, dp0_W, dp0_output, dp0_Wact = decoders(dp0_zI, dp0_zW, baseg)
             # reconstruction loss
             loss_recon = criterionRecon(dp0_output, dp0_img)
             # smooth warping loss
             loss_tvw = criterionTVWarp(dp0_W, weight=1e-6)
             # bias reduce loss
             loss_br = criterionBiasReduce(dp0_W, zeroWarp, weight=1e-2)
-            # intrinsic loss :Shading, L2
-            loss_intr_S = criterionSmoothL2(dp0_S, weight = 1e-6)
             # all loss functions
-            loss_all = loss_recon + loss_tvw + loss_br + loss_intr_S
+            loss_all = loss_recon + loss_tvw + loss_br
             loss_all.backward()
 
             updator_decoders.step()
             updator_encoders.step()
 
-            loss_encdec = loss_recon.data[0] + loss_br.data[0] + loss_tvw.data[0] + loss_intr_S.data[0] 
+            loss_encdec = loss_recon.data[0] + loss_br.data[0] + loss_tvw.data[0]
 
             train_loss += loss_encdec
             
             iter_mark+=1
-            print('Iteration[%d] loss -- all:  %.4f .. recon:  %.4f .. tvw: %.4f .. br: %.4f .. intr_s: %.4f .. ' 
-                % (iter_mark,  loss_encdec, loss_recon.data[0], loss_tvw.data[0], loss_br.data[0], loss_intr_S.data[0]))
+            print('Iteration[%d] loss -- all:  %.4f .. recon:  %.4f .. tvw: %.4f .. br: %.4f .. ' 
+                % (iter_mark,  loss_encdec, loss_recon.data[0], loss_tvw.data[0], loss_br.data[0]))
         # visualzing training progress
         gx = (dp0_W.data[:,0,:,:]+baseg.data[:,0,:,:]).unsqueeze(1).clone()
         gy = (dp0_W.data[:,1,:,:]+baseg.data[:,1,:,:]).unsqueeze(1).clone()
@@ -281,12 +293,6 @@ for epoch in range(opt.epoch_iter):
         visualizeAsImages(dp0_I.data.clone(), 
             opt.dirImageoutput, 
             filename='iter_'+str(iter_mark)+'_tex0_', n_sample = 49, nrow=7, normalize=False)
-        visualizeAsImages(dp0_S.data.clone(), 
-            opt.dirImageoutput, 
-            filename='iter_'+str(iter_mark)+'_intr_shade0_', n_sample = 49, nrow=7, normalize=False)
-        visualizeAsImages(dp0_T.data.clone(), 
-            opt.dirImageoutput, 
-            filename='iter_'+str(iter_mark)+'_intr_tex0_', n_sample = 49, nrow=7, normalize=False)
         visualizeAsImages(dp0_output.data.clone(), 
             opt.dirImageoutput, 
             filename='iter_'+str(iter_mark)+'_output0_', n_sample = 49, nrow=7, normalize=False)   
@@ -311,14 +317,16 @@ for epoch in range(opt.epoch_iter):
     for dataroot in TestingData:
         if not doTesting:
             break
-        dataset = DAEDataLoader.DAEImageFolderResize(root=dataroot,rgb = True, resize = 64)
-        print('# size of the current testing dataset is %d' %len(dataset))
+        dataset = lightDL.FareMultipieLightingTripletsFrontal(None, root=[dataroot], transform = None, resize=64)
+        print('# size of the current (sub)dataset is %d' %len(dataset))
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batchSize, shuffle=True, num_workers=int(opt.workers))
+        
+        
         for batch_idx, data_point in enumerate(dataloader, 0):
             #raw_input("Press Enter to continue...")
             gc.collect() # collect garbage
             ### prepare data ###
-            dp0_img = data_point
+            dp0_img = data_point[1]
             dp0_img = parseSampledDataPoint(dp0_img, opt.nc)
             baseg = getBaseGrid(N=opt.imgSize, getbatch = True, batchSize = dp0_img.size()[0])
             zeroWarp = torch.cuda.FloatTensor(1, 2, opt.imgSize, opt.imgSize).fill_(0)
@@ -331,26 +339,26 @@ for epoch in range(opt.epoch_iter):
             updator_encoders.zero_grad()
             decoders.zero_grad()
             encoders.zero_grad()
+            dp0_img = dp0_img.type(torch.cuda.FloatTensor)
             ### forward training points: dp0
-            dp0_z, dp0_zS, dp0_zT, dp0_zW = encoders(dp0_img)
-            dp0_S, dp0_T, dp0_I, dp0_W, dp0_output, dp0_Wact = decoders(dp0_zS, dp0_zT, dp0_zW, baseg)
+            dp0_z, dp0_zI, dp0_zW = encoders(dp0_img)
+            baseg = baseg.type(torch.cuda.FloatTensor)
+            dp0_I, dp0_W, dp0_output, dp0_Wact = decoders(dp0_zI, dp0_zW, baseg)
             # reconstruction loss
             loss_recon = criterionRecon(dp0_output, dp0_img)
             # smooth warping loss
             loss_tvw = criterionTVWarp(dp0_W, weight=1e-6)
             # bias reduce loss
             loss_br = criterionBiasReduce(dp0_W, zeroWarp, weight=1e-2)
-            # intrinsic loss :Shading, L2
-            loss_intr_S = criterionSmoothL2(dp0_S, weight = 1e-6)
             # all loss functions
-            loss_all = loss_recon + loss_tvw + loss_br + loss_intr_S
+            loss_all = loss_recon + loss_tvw + loss_br 
 
-            loss_encdec = loss_recon.data[0] + loss_br.data[0] + loss_tvw.data[0] + loss_intr_S.data[0] 
+            loss_encdec = loss_recon.data[0] + loss_br.data[0] + loss_tvw.data[0] 
 
             testing_loss += loss_encdec
             
-            print('Iteration[%d] loss -- all:  %.4f .. recon:  %.4f .. tvw: %.4f .. br: %.4f .. intr_s: %.4f .. ' 
-                % (iter_mark,  loss_encdec, loss_recon.data[0], loss_tvw.data[0], loss_br.data[0], loss_intr_S.data[0]))
+            print('Iteration[%d] loss -- all:  %.4f .. recon:  %.4f .. tvw: %.4f .. br: %.4f ' 
+                % (iter_mark,  loss_encdec, loss_recon.data[0], loss_tvw.data[0], loss_br.data[0]))
         # visualzing training progress
         gx = (dp0_W.data[:,0,:,:]+baseg.data[:,0,:,:]).unsqueeze(1).clone()
         gy = (dp0_W.data[:,1,:,:]+baseg.data[:,1,:,:]).unsqueeze(1).clone()
@@ -360,12 +368,6 @@ for epoch in range(opt.epoch_iter):
         visualizeAsImages(dp0_I.data.clone(), 
             opt.dirTestingoutput, 
             filename='tex0_', n_sample = 49, nrow=7, normalize=False)
-        visualizeAsImages(dp0_S.data.clone(), 
-            opt.dirTestingoutput, 
-            filename='intr_shade0_', n_sample = 49, nrow=7, normalize=False)
-        visualizeAsImages(dp0_T.data.clone(), 
-            opt.dirTestingoutput, 
-            filename='intr_tex0_', n_sample = 49, nrow=7, normalize=False)
         visualizeAsImages(dp0_output.data.clone(), 
             opt.dirTestingoutput, 
             filename='output0_', n_sample = 49, nrow=7, normalize=False)   

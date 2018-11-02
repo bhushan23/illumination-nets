@@ -109,8 +109,8 @@ class waspGridSpatialIntegral(nn.Module):
         super(waspGridSpatialIntegral, self).__init__()
         self.opt = opt
         self.w = self.opt.imgSize
-        self.filterx = torch.cuda.FloatTensor(1,1,1,self.w).fill_(1)
-        self.filtery = torch.cuda.FloatTensor(1,1,self.w,1).fill_(1)
+        self.filterx = torch.FloatTensor(1,1,1,self.w).fill_(1)
+        self.filtery = torch.FloatTensor(1,1,self.w,1).fill_(1)
         self.filterx = Variable(self.filterx, requires_grad=False)
         self.filtery = Variable(self.filtery, requires_grad=False)
         if opt.cuda:
