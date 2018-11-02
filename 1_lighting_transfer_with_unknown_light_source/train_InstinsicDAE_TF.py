@@ -174,22 +174,30 @@ else:
     encoders      = DAENet.Encoders_Intrinsic(opt)
     decoders      = DAENet.DecodersIntegralWarper2_Intrinsic(opt)
 
+# light_transfer    = DAENet.LightingTransfer(opt)
+
 if opt.cuda:
     encoders.cuda()
     decoders.cuda()
+    # light_transfer.cuda()
+
 if not opt.modelPath=='':
     # rewrite here
     print('Reload previous model at: '+ opt.modelPath)
     encoders.load_state_dict(torch.load(opt.modelPath+'_encoders.pth'))
     decoders.load_state_dict(torch.load(opt.modelPath+'_decoders.pth'))
+    # light_transfer.load_state_dict(torch.load(opt.modelPath+'_lighttransfer.pth'))
 else:
     print('No previous model found, initializing model weight.')
     encoders.apply(weights_init)
     decoders.apply(weights_init)
+    # light_transfer.apply(weights_init)
 
 print(opt.gpu_ids)
 updator_encoders     = optim.Adam(encoders.parameters(), lr = opt.lr, betas=(opt.beta1, 0.999))
 updator_decoders     = optim.Adam(decoders.parameters(), lr = opt.lr, betas=(opt.beta1, 0.999))
+# updator_lighttran    = optim.Adam(light_transfer.parameters(), lr = opt.lr, betas=(opt.beta1, 0.999))
+
 
 # criteria/loss
 criterionRecon      = nn.L1Loss()
@@ -254,7 +262,7 @@ for epoch in range(opt.epoch_iter):
             #raw_input("Press Enter to continue...")
             gc.collect() # collect garbage
             ### prepare data ###
-            dp0_img = data_point[1]
+            dp0_img, dest_light, dest_img = data_point[1], data_point[2], data_point[3]
             dp0_img = parseSampledDataPoint(dp0_img, opt.nc)
             dp0_img = dp0_img.type(torch.cuda.FloatTensor)
             
@@ -267,12 +275,15 @@ for epoch in range(opt.epoch_iter):
             zeroWarp = Variable(zeroWarp, requires_grad=False)
             updator_decoders.zero_grad()
             updator_encoders.zero_grad()
+            #updator_lighttran.zero_grad()
             decoders.zero_grad()
             encoders.zero_grad()
+            # light_transfer.zero_grad()
             ### forward training points: dp0
             dp0_z, dp0_zS, dp0_zT, dp0_zW = encoders(dp0_img)
             baseg = baseg.type(torch.cuda.FloatTensor)
-            dp0_S, dp0_T, dp0_I, dp0_W, dp0_output, dp0_Wact = decoders(dp0_zS, dp0_zT, dp0_zW, baseg)
+            # new_zS = light_transfer(dest_light, do0_zS)
+            dp0_S, dp0_T, dp0_I, dp0_W, dp0_output, dp0_Wact = decoders(dest_light, dp0_zS, dp0_zT, dp0_zW, baseg)
             # reconstruction loss
             loss_recon = criterionRecon(dp0_output, dp0_img)
             # smooth warping loss

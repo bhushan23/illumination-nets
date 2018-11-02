@@ -358,6 +358,34 @@ class waspDenseEncoder(nn.Module):
         output = self.main(input).view(-1,self.ndim)
         return output   
 
+class LightingTransfer(nn.Module):
+    def __init__(self, opt, ngpu=1, nz=128, activation=nn.ReLU, args=[False]):
+        super(LightingTransfer, self).__init__()
+        self.ngpu = ngpu
+        self.generate_light_space = nn.Sequential(
+            nn.Linear(1, nz),
+            nn.BatchNorm1d(nz),
+            nn.ReLU(*args),
+            nn.Linear(nz, nz),
+            nn.BatchNorm1d(nz),
+            nn.ReLU(*args),
+            nn.Linear(nz, nz)
+        )
+        self.main = nn.Sequential(
+            nn.Linear(nz*2, nz*2),
+            nn.BatchNorm1d(nz*2),
+            nn.ReLU(*args),
+            nn.Linear(nz*2, nz),
+            nn.BatchNorm1d(nz),
+            nn.ReLU(*args),
+            nn.Linear(nz, nz)
+        )
+
+    def forward(self, light_direction, encoded_shading):
+        light_space = self.generate_light_space(light_direction)
+        new_input   = torch.cat(light_space, encoded_shading)
+        return self.main(new_inputs)
+
 class waspDenseDecoder(nn.Module):
     def __init__(self, opt, ngpu=1, nz=128, nc=1, ngf=32, lb=0, ub=1, activation=nn.ReLU, args=[False], f_activation=nn.Hardtanh, f_args=[0,1]):
         super(waspDenseDecoder, self).__init__()
@@ -501,6 +529,7 @@ class DecodersIntegralWarper2_Intrinsic(nn.Module):
         self.sdim = opt.sdim
         self.tdim = opt.tdim
         self.wdim = opt.wdim
+        self.lightNet = LightingTransfer()
         self.decoderS = waspDecoder(opt, ngpu=self.ngpu, nz=opt.sdim, nc=1, ngf=opt.ngf, lb=0, ub=1)
         self.decoderT = waspDecoder(opt, ngpu=self.ngpu, nz=opt.tdim, nc=opt.nc, ngf=opt.ngf, lb=0, ub=1)
         self.decoderW = waspDecoderTanh(opt, ngpu=self.ngpu, nz=opt.wdim, nc=2, ngf=opt.ngf, lb=0, ub=0.1)
@@ -508,8 +537,9 @@ class DecodersIntegralWarper2_Intrinsic(nn.Module):
         self.warper   = waspWarper(opt)
         self.integrator = waspGridSpatialIntegral(opt)
         self.cutter = nn.Hardtanh(-1,1)
-    def forward(self, zS, zT, zW, basegrid):
-        self.shading = self.decoderS(zS.view(-1,self.sdim,1,1))
+    def forward(self, lightDirection, zS, zT, zW, basegrid):
+        newZS = self.lightNet(lightDirection, zS)
+        self.shading = self.decoderS(newZS.view(-1,self.sdim,1,1))
         self.texture = self.decoderT(zT.view(-1,self.tdim,1,1))
         self.img = self.intrinsicComposer(self.shading, self.texture)
         self.diffentialWarping = self.decoderW(zW.view(-1,self.wdim,1,1))*(5.0/self.imagedimension)
