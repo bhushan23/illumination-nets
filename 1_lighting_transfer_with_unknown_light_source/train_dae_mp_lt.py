@@ -42,7 +42,7 @@ parser.add_argument('-f',type=str,default= '', help='dummy input required for ju
 parser.add_argument('--modelPath', default='', help="path to model (to continue training)")
 
 if ON_SERVER:
-    out_path  = '/nfs/bigdisk/bsonawane/daeout'
+    out_path  = '/nfs/bigdisk/bsonawane/dae-2out'
     data_path = '/nfs/bigdisk/zhshu/data/fare/real/multipie_select_batches/'
     # data_path = '/nfs/bigdisk/bsonawane/multipie-data/'
 else:
@@ -194,7 +194,7 @@ criterionSmoothL2   = DAENet.SelfSmoothLoss2(opt)
 # Training set
 TrainingData = []
 TrainingData.append(opt.dirDataroot + 'session01_01_select')
-# TrainingData.append(opt.dirDataroot + 'session01_02_select')
+TrainingData.append(opt.dirDataroot + 'session01_02_select')
 # TrainingData.append(opt.dirDataroot + 'session01_03_select')
 # TrainingData.append(opt.dirDataroot + 'session01_04_select')
 # TrainingData.append(opt.dirDataroot + 'session01_05_select')
