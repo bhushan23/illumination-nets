@@ -42,7 +42,7 @@ parser.add_argument('-f',type=str,default= '', help='dummy input required for ju
 parser.add_argument('--modelPath', default='', help="path to model (to continue training)")
 
 if ON_SERVER:
-    out_path  = '/nfs/bigdisk/bsonawane/dae-2out'
+    out_path  = '/nfs/bigdisk/bsonawane/dae-3-out'
     data_path = '/nfs/bigdisk/zhshu/data/fare/real/multipie_select_batches/'
     # data_path = '/nfs/bigdisk/bsonawane/multipie-data/'
 else:
@@ -201,7 +201,7 @@ criterionSmoothL2   = DAENet.SelfSmoothLoss2(opt)
 # Training set
 TrainingData = []
 TrainingData.append(opt.dirDataroot + 'session01_01_select')
-TrainingData.append(opt.dirDataroot + 'session01_02_select')
+# TrainingData.append(opt.dirDataroot + 'session01_02_select')
 # TrainingData.append(opt.dirDataroot + 'session01_03_select')
 # TrainingData.append(opt.dirDataroot + 'session01_04_select')
 # TrainingData.append(opt.dirDataroot + 'session01_05_select')
@@ -271,6 +271,7 @@ for epoch in range(opt.epoch_iter):
             encoders.zero_grad()
             ### forward training points: dp0
             dp0_z, dp0_zS, dp0_zT, dp0_zW = encoders(dp0_img)
+            baseg = baseg.type(torch.cuda.FloatTensor)
             dp0_S, dp0_T, dp0_I, dp0_W, dp0_output, dp0_Wact = decoders(dp0_zS, dp0_zT, dp0_zW, baseg)
             # reconstruction loss
             loss_recon = criterionRecon(dp0_output, dp0_img)
