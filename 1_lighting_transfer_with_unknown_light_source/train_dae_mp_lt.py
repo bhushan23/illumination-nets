@@ -24,7 +24,7 @@ import math
 import DAELightTransferDataLoader as lightDL
 import gc
 
-ON_SERVER = False
+ON_SERVER = True
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=8)
@@ -44,6 +44,7 @@ parser.add_argument('--modelPath', default='', help="path to model (to continue 
 if ON_SERVER:
     out_path  = '/nfs/bigdisk/bsonawane/daeout'
     data_path = '/nfs/bigdisk/zhshu/data/fare/real/multipie_select_batches/'
+    # data_path = '/nfs/bigdisk/bsonawane/multipie-data/'
 else:
     out_path  = '/home/bhushan/work/thesis/Sem2/source/experiment/illumination-nets/1_lighting_transfer_with_unknown_light_source/output'
     data_path = '/home/bhushan/work/thesis/Sem2/source/experiment/illumination-nets/data/multipie_select_batches/'
@@ -166,8 +167,8 @@ else:
     decoders      = DAENet.DecodersIntegralWarper2(opt)
 
 if opt.cuda:
-    encoders.cuda()
-    decoders.cuda()
+    encoders = encoders.cuda()
+    decoders = decoders.cuda()
 
 if not opt.modelPath == '':
     # rewrite here
@@ -193,11 +194,11 @@ criterionSmoothL2   = DAENet.SelfSmoothLoss2(opt)
 # Training set
 TrainingData = []
 TrainingData.append(opt.dirDataroot + 'session01_01_select')
-TrainingData.append(opt.dirDataroot + 'session01_02_select')
-TrainingData.append(opt.dirDataroot + 'session01_03_select')
-TrainingData.append(opt.dirDataroot + 'session01_04_select')
-TrainingData.append(opt.dirDataroot + 'session01_05_select')
-TrainingData.append(opt.dirDataroot + 'session01_06_select')
+# TrainingData.append(opt.dirDataroot + 'session01_02_select')
+# TrainingData.append(opt.dirDataroot + 'session01_03_select')
+# TrainingData.append(opt.dirDataroot + 'session01_04_select')
+# TrainingData.append(opt.dirDataroot + 'session01_05_select')
+# TrainingData.append(opt.dirDataroot + 'session01_06_select')
 '''
 TrainingData.append(opt.dirDataroot + 'celeba_split/img_01')
 TrainingData.append(opt.dirDataroot + 'celeba_split/img_02')
@@ -246,6 +247,7 @@ for epoch in range(opt.epoch_iter):
             gc.collect() # collect garbage
             ### prepare data ###
             dp0_img = data_point[1]
+            print(dp0_img.shape)
             dp0_img = parseSampledDataPoint(dp0_img, opt.nc)
             dp0_img = dp0_img.type(torch.cuda.FloatTensor)
             baseg = getBaseGrid(N=opt.imgSize, getbatch = True, batchSize = dp0_img.size()[0])
@@ -260,6 +262,7 @@ for epoch in range(opt.epoch_iter):
             decoders.zero_grad()
             encoders.zero_grad()
             ### forward training points: dp0
+            print(dp0_img.shape)
             dp0_z, dp0_zI, dp0_zW = encoders(dp0_img)
             baseg = baseg.type(torch.cuda.FloatTensor)
             print(type(dp0_zI), type(dp0_zW), type(baseg))
