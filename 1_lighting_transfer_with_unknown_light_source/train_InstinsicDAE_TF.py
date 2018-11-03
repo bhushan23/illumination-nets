@@ -263,7 +263,9 @@ for epoch in range(opt.epoch_iter):
             gc.collect() # collect garbage
             ### prepare data ###
             dp0_img, dest_light, dest_img = data_point[1], data_point[2], data_point[3]
-            print('dest_light: ', dest_light)
+            dest_img = dest_img.type(torch.cuda.FloatTensor)
+            dest_img = dest_img.permute(0, 3, 1, 2)
+            # print('dest_light: ', dest_light)
             dp0_img = parseSampledDataPoint(dp0_img, opt.nc)
             dp0_img = dp0_img.type(torch.cuda.FloatTensor)
             
@@ -393,6 +395,7 @@ for epoch in range(opt.epoch_iter):
             print('Iteration[%d] loss -- all:  %.4f .. recon:  %.4f .. tvw: %.4f .. br: %.4f .. intr_s: %.4f .. ' 
                 % (iter_mark,  loss_encdec, loss_recon.data[0], loss_tvw.data[0], loss_br.data[0], loss_intr_S.data[0]))
         # visualzing training progress
+        print('Storing:' )
         gx = (dp0_W.data[:,0,:,:]+baseg.data[:,0,:,:]).unsqueeze(1).clone()
         gy = (dp0_W.data[:,1,:,:]+baseg.data[:,1,:,:]).unsqueeze(1).clone()
         visualizeAsImages(dp0_img.data.clone(), 
@@ -401,6 +404,9 @@ for epoch in range(opt.epoch_iter):
         visualizeAsImages(dp0_I.data.clone(), 
             opt.dirTestingoutput, 
             filename='tex0_', n_sample = 49, nrow=7, normalize=False)
+        visualizeAsImages(dp0_img.data.clone(), 
+            opt.dest_img, 
+            filename='expected_output0_', n_sample = 49, nrow=7, normalize=False)           
         visualizeAsImages(dp0_S.data.clone(), 
             opt.dirTestingoutput, 
             filename='intr_shade0_', n_sample = 49, nrow=7, normalize=False)

@@ -363,28 +363,29 @@ class LightingTransfer(nn.Module):
         super(LightingTransfer, self).__init__()
         self.ngpu = ngpu
         self.generate_light_space = nn.Sequential(
-            nn.Linear(1, nz),
-            nn.BatchNorm1d(nz),
+            nn.Linear(1, opt.sdim),
+            nn.BatchNorm1d(opt.sdim),
             nn.ReLU(*args),
-            nn.Linear(nz, nz),
-            nn.BatchNorm1d(nz),
+            nn.Linear(opt.sdim, opt.sdim),
+            nn.BatchNorm1d(opt.sdim),
             nn.ReLU(*args),
-            nn.Linear(nz, nz)
+            nn.Linear(opt.sdim, opt.sdim)
         )
         self.main = nn.Sequential(
-            nn.Linear(nz*2, nz*2),
-            nn.BatchNorm1d(nz*2),
+            nn.Linear(opt.sdim*2, opt.sdim*2),
+            nn.BatchNorm1d(opt.sdim*2),
             nn.ReLU(*args),
-            nn.Linear(nz*2, nz),
-            nn.BatchNorm1d(nz),
+            nn.Linear(opt.sdim*2, opt.sdim),
+            nn.BatchNorm1d(opt.sdim),
             nn.ReLU(*args),
-            nn.Linear(nz, nz)
+            nn.Linear(opt.sdim, opt.sdim)
         )
 
     def forward(self, light_direction, encoded_shading):
         light_space = self.generate_light_space(light_direction)
-        new_input   = torch.cat(light_space, encoded_shading)
-        return self.main(new_inputs)
+        print('Generation Done:', light_space.shape, encoded_shading.shape)
+        new_input   = torch.cat((light_space, encoded_shading), 1)
+        return self.main(new_input)
 
 class waspDenseDecoder(nn.Module):
     def __init__(self, opt, ngpu=1, nz=128, nc=1, ngf=32, lb=0, ub=1, activation=nn.ReLU, args=[False], f_activation=nn.Hardtanh, f_args=[0,1]):
@@ -538,7 +539,8 @@ class DecodersIntegralWarper2_Intrinsic(nn.Module):
         self.integrator = waspGridSpatialIntegral(opt)
         self.cutter = nn.Hardtanh(-1,1)
     def forward(self, lightDirection, zS, zT, zW, basegrid):
-        newZS = self.lightNet(lightDirection, zS)
+        ld = lightDirection.type(torch.cuda.FloatTensor)
+        newZS = self.lightNet(ld, zS)
         self.shading = self.decoderS(newZS.view(-1,self.sdim,1,1))
         self.texture = self.decoderT(zT.view(-1,self.tdim,1,1))
         self.img = self.intrinsicComposer(self.shading, self.texture)
@@ -598,7 +600,10 @@ class Dense_DecodersIntegralWarper2_Intrinsic(nn.Module):
         self.integrator = waspGridSpatialIntegral(opt)
         self.cutter = nn.Hardtanh(-1,1)
     def forward(self, lightingDirection, zS, zT, zW, basegrid):
-        newZS        = self.lightNet(lightingDirection, zS)
+        ld           = lightingDirection.type(torch.cuda.FloatTensor)
+        ld           = ld.reshape(ld.shape[0], 1)
+        # print('LD SHAPE:', ld.shape, zS.shape)
+        newZS        = self.lightNet(ld, zS)
         self.shading = self.decoderS(newZS.view(-1,self.sdim,1,1))
         self.texture = self.decoderT(zT.view(-1,self.tdim,1,1))
         self.img     = self.intrinsicComposer(self.shading, self.texture)
