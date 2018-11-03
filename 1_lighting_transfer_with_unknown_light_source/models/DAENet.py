@@ -598,7 +598,7 @@ class Dense_DecodersIntegralWarper2_Intrinsic(nn.Module):
         self.integrator = waspGridSpatialIntegral(opt)
         self.cutter = nn.Hardtanh(-1,1)
     def forward(self, lightingDirection, zS, zT, zW, basegrid):
-        newZS        = self.lightNet(lightDirection, zS)
+        newZS        = self.lightNet(lightingDirection, zS)
         self.shading = self.decoderS(newZS.view(-1,self.sdim,1,1))
         self.texture = self.decoderT(zT.view(-1,self.tdim,1,1))
         self.img     = self.intrinsicComposer(self.shading, self.texture)

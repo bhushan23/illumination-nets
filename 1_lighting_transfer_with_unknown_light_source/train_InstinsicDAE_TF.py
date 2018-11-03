@@ -42,7 +42,7 @@ parser.add_argument('-f',type=str,default= '', help='dummy input required for ju
 parser.add_argument('--modelPath', default='', help="path to model (to continue training)")
 
 if ON_SERVER:
-    out_path  = '/nfs/bigdisk/bsonawane/dae-3-out'
+    out_path  = '/nfs/bigdisk/bsonawane/dae-5-out'
     data_path = '/nfs/bigdisk/zhshu/data/fare/real/multipie_select_batches/'
     # data_path = '/nfs/bigdisk/bsonawane/multipie-data/'
 else:
@@ -263,6 +263,7 @@ for epoch in range(opt.epoch_iter):
             gc.collect() # collect garbage
             ### prepare data ###
             dp0_img, dest_light, dest_img = data_point[1], data_point[2], data_point[3]
+            print('dest_light: ', dest_light)
             dp0_img = parseSampledDataPoint(dp0_img, opt.nc)
             dp0_img = dp0_img.type(torch.cuda.FloatTensor)
             
@@ -285,7 +286,7 @@ for epoch in range(opt.epoch_iter):
             # new_zS = light_transfer(dest_light, do0_zS)
             dp0_S, dp0_T, dp0_I, dp0_W, dp0_output, dp0_Wact = decoders(dest_light, dp0_zS, dp0_zT, dp0_zW, baseg)
             # reconstruction loss
-            loss_recon = criterionRecon(dp0_output, dp0_img)
+            loss_recon = criterionRecon(dp0_output, dest_img)
             # smooth warping loss
             loss_tvw = criterionTVWarp(dp0_W, weight=1e-6)
             # bias reduce loss
@@ -312,6 +313,9 @@ for epoch in range(opt.epoch_iter):
         visualizeAsImages(dp0_img.data.clone(), 
             opt.dirImageoutput, 
             filename='iter_'+str(iter_mark)+'_img0_', n_sample = 49, nrow=7, normalize=False)           
+        visualizeAsImages(dest_img.data.clone(), 
+            opt.dirImageoutput, 
+            filename='iter_'+str(iter_mark)+'_destImg_', n_sample = 49, nrow=7, normalize=False)           
         visualizeAsImages(dp0_I.data.clone(), 
             opt.dirImageoutput, 
             filename='iter_'+str(iter_mark)+'_tex0_', n_sample = 49, nrow=7, normalize=False)
