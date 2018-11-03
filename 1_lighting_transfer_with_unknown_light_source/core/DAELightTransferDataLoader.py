@@ -77,10 +77,10 @@ class FareMultipieLightingTripletsFrontal(data.Dataset):
 
                 for data_point in new_list:
                     # print(data_point[0], data_point[1])
-                    source1 = data_point[0][0]
+                    source1 = int(data_point[0][0])
                     image1  = torch.tensor(self.get_image(data_point[0][1], resize = resize))
                     # image1  = image1.permute(2, 0, 1)
-                    source2 = data_point[1][0]
+                    source2 = int(data_point[1][0])
                     image2  = torch.tensor(self.get_image(data_point[1][1], resize = resize))
                     # image2  = image2.permute(2, 0, 1)
                     data.append([source1, image1, source2, image2])                    
