@@ -529,7 +529,7 @@ class DecodersIntegralWarper2_Intrinsic(nn.Module):
         self.sdim = opt.sdim
         self.tdim = opt.tdim
         self.wdim = opt.wdim
-        self.lightNet = LightingTransfer()
+        self.lightNet = LightingTransfer(opt)
         self.decoderS = waspDecoder(opt, ngpu=self.ngpu, nz=opt.sdim, nc=1, ngf=opt.ngf, lb=0, ub=1)
         self.decoderT = waspDecoder(opt, ngpu=self.ngpu, nz=opt.tdim, nc=opt.nc, ngf=opt.ngf, lb=0, ub=1)
         self.decoderW = waspDecoderTanh(opt, ngpu=self.ngpu, nz=opt.wdim, nc=2, ngf=opt.ngf, lb=0, ub=0.1)
@@ -583,7 +583,7 @@ class Dense_DecodersIntegralWarper2_Intrinsic(nn.Module):
         self.tdim = opt.tdim
         self.wdim = opt.wdim
         # Lighting Net
-        self.lightNet = LightingTransfer()
+        self.lightNet = LightingTransfer(opt)
         # shading decoder
         self.decoderS = waspDenseDecoder(opt, ngpu=self.ngpu, nz=opt.sdim, nc=1, ngf=opt.ngf, lb=0, ub=1)
         # albedo decoder
