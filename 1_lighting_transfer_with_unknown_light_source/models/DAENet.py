@@ -582,6 +582,8 @@ class Dense_DecodersIntegralWarper2_Intrinsic(nn.Module):
         self.sdim = opt.sdim
         self.tdim = opt.tdim
         self.wdim = opt.wdim
+        # Lighting Net
+        self.lightNet = LightingTransfer()
         # shading decoder
         self.decoderS = waspDenseDecoder(opt, ngpu=self.ngpu, nz=opt.sdim, nc=1, ngf=opt.ngf, lb=0, ub=1)
         # albedo decoder
@@ -595,8 +597,9 @@ class Dense_DecodersIntegralWarper2_Intrinsic(nn.Module):
         # spatial intergrator for deformation field
         self.integrator = waspGridSpatialIntegral(opt)
         self.cutter = nn.Hardtanh(-1,1)
-    def forward(self, zS, zT, zW, basegrid):
-        self.shading = self.decoderS(zS.view(-1,self.sdim,1,1))
+    def forward(self, lightingDirection, zS, zT, zW, basegrid):
+        newZS        = self.lightNet(lightDirection, zS)
+        self.shading = self.decoderS(newZS.view(-1,self.sdim,1,1))
         self.texture = self.decoderT(zT.view(-1,self.tdim,1,1))
         self.img     = self.intrinsicComposer(self.shading, self.texture)
         self.diffentialWarping = self.decoderW(zW.view(-1,self.wdim,1,1))*(5.0/self.imagedimension)
