@@ -9,6 +9,7 @@ import random
 import csv
 import matplotlib.pyplot as plt
 import itertools
+import torchvision.utils as vutils
 
 IMG_EXTENSIONS = [
     '.jpg', '.JPG', '.jpeg', '.JPEG',
@@ -77,12 +78,20 @@ class FareMultipieLightingTripletsFrontal(data.Dataset):
 
                 for data_point in new_list:
                     # print(data_point[0], data_point[1])
+                    # source1 = torch.zeros((19,))
+                    # source1[int(data_point[0][0])] = 1
                     source1 = int(data_point[0][0])
                     image1  = torch.tensor(self.get_image(data_point[0][1], resize = resize))
                     # image1  = image1.permute(2, 0, 1)
+                    # source2 = torch.zeros((19,))
+                    # source2[int(data_point[1][0])] = 1
                     source2 = int(data_point[1][0])
+                    # source2 = int(data_point[1][0])
                     image2  = torch.tensor(self.get_image(data_point[1][1], resize = resize))
-                    # image2  = image2.permute(2, 0, 1)
+                    #image2  = image2.permute(2, 0, 1)
+                    #vutils.save_image(image2, 
+                    #    '/nfs/bigdisk/bsonawane/dae-5-out/Test_Out.png',
+                    #    nrow=49, normalize = False, padding=2)
                     data.append([source1, image1, source2, image2])                    
         print(len(data))
         print(data[0][1].shape, data[0][3].shape)

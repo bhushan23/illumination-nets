@@ -209,7 +209,7 @@ criterionSmoothL2   = DAENet.SelfSmoothLoss2(opt)
 # Training set
 TrainingData = []
 TrainingData.append(opt.dirDataroot + 'session01_01_select')
-# TrainingData.append(opt.dirDataroot + 'session01_02_select')
+TrainingData.append(opt.dirDataroot + 'session01_02_select')
 # TrainingData.append(opt.dirDataroot + 'session01_03_select')
 # TrainingData.append(opt.dirDataroot + 'session01_04_select')
 # TrainingData.append(opt.dirDataroot + 'session01_05_select')
@@ -237,38 +237,65 @@ TrainingData.append(opt.dirDataroot + 'celeba_split/img_18')
 '''
 # Testing set
 TestingData = []
-TestingData.append(opt.dirDataroot + 'session01_07_select')
+TestingData.append(opt.dirDataroot + 'session01_select_test')
 
 
 # ------------ training ------------ #
 doTraining = True
 doTesting = True
 iter_mark=0
-for epoch in range(opt.epoch_iter):
-    train_loss = 0
-    train_amount = 0+1e-6
-    gc.collect() # collect garbage
-    encoders.train()
-    decoders.train()
-    for dataroot in TrainingData:
-        if not doTraining:
-            break
 
-        dataset = lightDL.FareMultipieLightingTripletsFrontal(None, root=[dataroot], transform = None, resize=64)
-        print('# size of the current (sub)dataset is %d' %len(dataset))
-        train_amount = train_amount + len(dataset)
-        dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batchSize, shuffle=True, num_workers=int(opt.workers))
+dataset = lightDL.FareMultipieLightingTripletsFrontal(None, root=TrainingData, transform = None, resize=64)
+# print('# size of the current (sub)dataset is %d' %len(dataset))
+# train_amount = train_amount + len(dataset)
+dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batchSize, shuffle=True, num_workers=int(opt.workers))
+
+
+dataset_test = lightDL.FareMultipieLightingTripletsFrontal(None, root=TestingData, transform = None, resize=64)
+dataloader_test = torch.utils.data.DataLoader(dataset_test, batch_size=opt.batchSize, shuffle=True, num_workers=int(opt.workers))
+
+
+_, src_img, _, dest_img = next(iter(dataloader))
+
+src_img = parseSampledDataPoint(src_img, opt.nc)
+src_img = src_img.type(torch.cuda.FloatTensor)
+
+dest_img = parseSampledDataPoint(dest_img, opt.nc)
+dest_img = dest_img.type(torch.cuda.FloatTensor)
+
+visualizeAsImages(src_img.data.clone(), 
+                opt.dirImageoutput, 
+                filename='TEST_INIT_srcimg0', n_sample = 49, nrow=7, normalize=False)           
+visualizeAsImages(dest_img.data.clone(), 
+                opt.dirImageoutput, 
+                filename='TEST_INIT_destImg', n_sample = 49, nrow=7, normalize=False)           
+
+print('Log done')
+for epoch in range(opt.epoch_iter):
+        train_loss = 0
+        train_amount = 0+1e-6
+        gc.collect() # collect garbage
+        encoders.train()
+        decoders.train()
+        # for dataroot in TrainingData:
+        if not doTraining:
+           break
+
         for batch_idx, data_point in enumerate(dataloader, 0):
             #raw_input("Press Enter to continue...")
             gc.collect() # collect garbage
             ### prepare data ###
             dp0_img, dest_light, dest_img = data_point[1], data_point[2], data_point[3]
-            dest_img = dest_img.type(torch.cuda.FloatTensor)
-            dest_img = dest_img.permute(0, 3, 1, 2)
+            # dest_img = dest_img.type(torch.cuda.FloatTensor)
+            # dest_img = dest_img.permute(0, 3, 1, 2)
+            
             # print('dest_light: ', dest_light)
             dp0_img = parseSampledDataPoint(dp0_img, opt.nc)
             dp0_img = dp0_img.type(torch.cuda.FloatTensor)
-            
+
+            dest_img = parseSampledDataPoint(dest_img, opt.nc)
+            dest_img = dest_img.type(torch.cuda.FloatTensor)
+
             baseg = getBaseGrid(N=opt.imgSize, getbatch = True, batchSize = dp0_img.size()[0])
             zeroWarp = torch.cuda.FloatTensor(1, 2, opt.imgSize, opt.imgSize).fill_(0)
             if opt.cuda:
@@ -336,95 +363,94 @@ for epoch in range(opt.epoch_iter):
         visualizeAsImages((gy+1)/2, 
             opt.dirImageoutput, 
             filename='iter_'+str(iter_mark)+'_warp0y_', n_sample = 49, nrow=7, normalize=False)   
-    if doTraining:
-        # do checkpointing
-        torch.save(encoders.state_dict(), '%s/wasp_model_epoch_encoders.pth' % (opt.dirCheckpoints))
-        torch.save(decoders.state_dict(), '%s/wasp_model_epoch_decoders.pth' % (opt.dirCheckpoints))
+        if doTraining:
+         # do checkpointing
+         torch.save(encoders.state_dict(), '%s/wasp_model_epoch_encoders.pth' % (opt.dirCheckpoints))
+         torch.save(decoders.state_dict(), '%s/wasp_model_epoch_decoders.pth' % (opt.dirCheckpoints))
 
-    # ------------ testing ------------ #
-    
-    # on synthetic image set
-    print('Testing images ... ')
-    #raw_input("Press Enter to continue...")
-    testing_loss=0
-    gc.collect() # collect garbage
-    for dataroot in TestingData:
-        if not doTesting:
-            break
-        dataset = lightDL.FareMultipieLightingTripletsFrontal(None, root=[dataroot], transform = None, resize=64)
-        print('# size of the current testing dataset is %d' %len(dataset))
-        dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batchSize, shuffle=True, num_workers=int(opt.workers))
-        for batch_idx, data_point in enumerate(dataloader, 0):
-            #raw_input("Press Enter to continue...")
-            gc.collect() # collect garbage
-            ### prepare data ###
-            dp0_img = data_point[1]
-            dp0_img = parseSampledDataPoint(dp0_img, opt.nc)
-            baseg = getBaseGrid(N=opt.imgSize, getbatch = True, batchSize = dp0_img.size()[0])
-            zeroWarp = torch.cuda.FloatTensor(1, 2, opt.imgSize, opt.imgSize).fill_(0)
-            if opt.cuda:
-                dp0_img, baseg, zeroWarp = setCuda(dp0_img, baseg, zeroWarp)
-            dp0_img, = setAsVariable(dp0_img)
-            baseg = Variable(baseg, requires_grad=False)
-            zeroWarp = Variable(zeroWarp, requires_grad=False)
-            updator_decoders.zero_grad()
-            updator_encoders.zero_grad()
-            decoders.zero_grad()
-            encoders.zero_grad()
-            dp0_img = dp0_img.type(torch.cuda.FloatTensor)
-            
-            ### forward training points: dp0
-            dp0_z, dp0_zS, dp0_zT, dp0_zW = encoders(dp0_img)
-            baseg = baseg.type(torch.cuda.FloatTensor)
-            dp0_S, dp0_T, dp0_I, dp0_W, dp0_output, dp0_Wact = decoders(dp0_zS, dp0_zT, dp0_zW, baseg)
-            # reconstruction loss
-            loss_recon = criterionRecon(dp0_output, dp0_img)
-            # smooth warping loss
-            loss_tvw = criterionTVWarp(dp0_W, weight=1e-6)
-            # bias reduce loss
-            loss_br = criterionBiasReduce(dp0_W, zeroWarp, weight=1e-2)
-            # intrinsic loss :Shading, L2
-            loss_intr_S = criterionSmoothL2(dp0_S, weight = 1e-6)
-            # all loss functions
-            loss_all = loss_recon + loss_tvw + loss_br + loss_intr_S
+     
+        # ------------ testing ------------ #
+         
+        # on synthetic image set
+        print('Testing images ... ')
+        #raw_input("Press Enter to continue...")
+        testing_loss=0
+        gc.collect() # collect garbage
+        if doTesting:
+           for batch_idx, data_point in enumerate(dataloader_test, 0):
+               #raw_input("Press Enter to continue...")
+               gc.collect() # collect garbage
+               ### prepare data ###
+               dp0_img, dest_light, dest_img = data_point[1], data_point[2], data_point[3]
 
-            loss_encdec = loss_recon.data[0] + loss_br.data[0] + loss_tvw.data[0] + loss_intr_S.data[0] 
-
-            testing_loss += loss_encdec
-            
-            print('Iteration[%d] loss -- all:  %.4f .. recon:  %.4f .. tvw: %.4f .. br: %.4f .. intr_s: %.4f .. ' 
-                % (iter_mark,  loss_encdec, loss_recon.data[0], loss_tvw.data[0], loss_br.data[0], loss_intr_S.data[0]))
-        # visualzing training progress
-        print('Storing:' )
-        gx = (dp0_W.data[:,0,:,:]+baseg.data[:,0,:,:]).unsqueeze(1).clone()
-        gy = (dp0_W.data[:,1,:,:]+baseg.data[:,1,:,:]).unsqueeze(1).clone()
-        visualizeAsImages(dp0_img.data.clone(), 
-            opt.dirTestingoutput, 
-            filename='img0_', n_sample = 49, nrow=7, normalize=False)           
-        visualizeAsImages(dp0_I.data.clone(), 
-            opt.dirTestingoutput, 
-            filename='tex0_', n_sample = 49, nrow=7, normalize=False)
-        visualizeAsImages(dp0_img.data.clone(), 
-            opt.dest_img, 
-            filename='expected_output0_', n_sample = 49, nrow=7, normalize=False)           
-        visualizeAsImages(dp0_S.data.clone(), 
-            opt.dirTestingoutput, 
-            filename='intr_shade0_', n_sample = 49, nrow=7, normalize=False)
-        visualizeAsImages(dp0_T.data.clone(), 
-            opt.dirTestingoutput, 
-            filename='intr_tex0_', n_sample = 49, nrow=7, normalize=False)
-        visualizeAsImages(dp0_output.data.clone(), 
-            opt.dirTestingoutput, 
-            filename='output0_', n_sample = 49, nrow=7, normalize=False)   
-        visualizeAsImages((gx+1)/2, 
-            opt.dirTestingoutput, 
-            filename='warp0x_', n_sample = 49, nrow=7, normalize=False)          
-        visualizeAsImages((gy+1)/2, 
-            opt.dirTestingoutput, 
-            filename='warp0y_', n_sample = 49, nrow=7, normalize=False)   
-        # put testing code here #
-    gc.collect() # collect garbage
-
+               dest_img = parseSampledDataPoint(dest_img, opt.nc)
+               dest_img = dest_img.type(torch.cuda.FloatTensor)
+   
+               dp0_img = parseSampledDataPoint(dp0_img, opt.nc)
+               baseg = getBaseGrid(N=opt.imgSize, getbatch = True, batchSize = dp0_img.size()[0])
+               zeroWarp = torch.cuda.FloatTensor(1, 2, opt.imgSize, opt.imgSize).fill_(0)
+               if opt.cuda:
+                   dp0_img, baseg, zeroWarp = setCuda(dp0_img, baseg, zeroWarp)
+               dp0_img, = setAsVariable(dp0_img)
+               baseg = Variable(baseg, requires_grad=False)
+               zeroWarp = Variable(zeroWarp, requires_grad=False)
+               updator_decoders.zero_grad()
+               updator_encoders.zero_grad()
+               decoders.zero_grad()
+               encoders.zero_grad()
+               dp0_img = dp0_img.type(torch.cuda.FloatTensor)
+               
+               ### forward training points: dp0
+               dp0_z, dp0_zS, dp0_zT, dp0_zW = encoders(dp0_img)
+               baseg = baseg.type(torch.cuda.FloatTensor)
+               dp0_S, dp0_T, dp0_I, dp0_W, dp0_output, dp0_Wact = decoders(dest_light, dp0_zS, dp0_zT, dp0_zW, baseg)
+               # reconstruction loss
+               loss_recon = criterionRecon(dp0_output, dest_img)
+               # smooth warping loss
+               loss_tvw = criterionTVWarp(dp0_W, weight=1e-6)
+               # bias reduce loss
+               loss_br = criterionBiasReduce(dp0_W, zeroWarp, weight=1e-2)
+               # intrinsic loss :Shading, L2
+               loss_intr_S = criterionSmoothL2(dp0_S, weight = 1e-6)
+               # all loss functions
+               loss_all = loss_recon + loss_tvw + loss_br + loss_intr_S
+   
+               loss_encdec = loss_recon.data[0] + loss_br.data[0] + loss_tvw.data[0] + loss_intr_S.data[0] 
+   
+               testing_loss += loss_encdec
+               
+               print('Iteration[%d] loss -- all:  %.4f .. recon:  %.4f .. tvw: %.4f .. br: %.4f .. intr_s: %.4f .. ' 
+                   % (iter_mark,  loss_encdec, loss_recon.data[0], loss_tvw.data[0], loss_br.data[0], loss_intr_S.data[0]))
+           # visualzing training progress
+           print('Storing:' )
+           gx = (dp0_W.data[:,0,:,:]+baseg.data[:,0,:,:]).unsqueeze(1).clone()
+           gy = (dp0_W.data[:,1,:,:]+baseg.data[:,1,:,:]).unsqueeze(1).clone()
+           visualizeAsImages(dp0_img.data.clone(), 
+               opt.dirTestingoutput, 
+               filename='img0_', n_sample = 49, nrow=7, normalize=False)           
+           visualizeAsImages(dp0_I.data.clone(), 
+               opt.dirTestingoutput, 
+               filename='tex0_', n_sample = 49, nrow=7, normalize=False)
+           visualizeAsImages(dest_img.data.clone(), 
+               opt.dirTestingoutput, 
+               filename='expected_output0_', n_sample = 49, nrow=7, normalize=False)           
+           visualizeAsImages(dp0_S.data.clone(), 
+               opt.dirTestingoutput, 
+               filename='intr_shade0_', n_sample = 49, nrow=7, normalize=False)
+           visualizeAsImages(dp0_T.data.clone(), 
+               opt.dirTestingoutput, 
+               filename='intr_tex0_', n_sample = 49, nrow=7, normalize=False)
+           visualizeAsImages(dp0_output.data.clone(), 
+               opt.dirTestingoutput, 
+               filename='output0_', n_sample = 49, nrow=7, normalize=False)   
+           visualizeAsImages((gx+1)/2, 
+               opt.dirTestingoutput, 
+               filename='warp0x_', n_sample = 49, nrow=7, normalize=False)          
+           visualizeAsImages((gy+1)/2, 
+               opt.dirTestingoutput, 
+               filename='warp0y_', n_sample = 49, nrow=7, normalize=False)   
+           # put testing code here #
+           gc.collect() # collect garbage
 
 
 
