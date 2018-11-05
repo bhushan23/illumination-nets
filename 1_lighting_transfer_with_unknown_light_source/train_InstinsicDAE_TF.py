@@ -210,10 +210,10 @@ criterionSmoothL2   = DAENet.SelfSmoothLoss2(opt)
 TrainingData = []
 TrainingData.append(opt.dirDataroot + 'session01_01_select')
 TrainingData.append(opt.dirDataroot + 'session01_02_select')
-# TrainingData.append(opt.dirDataroot + 'session01_03_select')
-# TrainingData.append(opt.dirDataroot + 'session01_04_select')
-# TrainingData.append(opt.dirDataroot + 'session01_05_select')
-# TrainingData.append(opt.dirDataroot + 'session01_06_select')
+TrainingData.append(opt.dirDataroot + 'session01_03_select')
+TrainingData.append(opt.dirDataroot + 'session01_04_select')
+TrainingData.append(opt.dirDataroot + 'session01_05_select')
+TrainingData.append(opt.dirDataroot + 'session01_06_select')
 
 '''
 TrainingData.append(opt.dirDataroot + 'celeba_split/img_01')
