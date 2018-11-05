@@ -45,7 +45,7 @@ class FareMultipieLightingTripletsFrontal(data.Dataset):
         # debugging- save images during init
         self.images = sess_img_map
         # print(img_map)
-        # self.save_images()
+        self.save_images()
         self.data_set = self.convert_one_to_one()
         self.transform = transform
         self.return_paths = return_paths
@@ -55,17 +55,17 @@ class FareMultipieLightingTripletsFrontal(data.Dataset):
         # print(self.images)
         for session_name, session_val in self.images.items():
             print('Session: ', session_name)
-            for image_id, val in session_val.items():
+            for (image_id, image_e), val in session_val.items():
                 # print('In ', key, val)
-                print('Image_id: ', image_id)
+                print('Image_id: ', image_id, image_e)
                 for key1, val1 in val:
                     print('Opening ', key1, val1)
                     img0 = self.get_image(val1, resize = resize)
-                    # plt.imshow(img0)
+                    plt.imshow(img0)
                     #plt.imshow(img0)
-                    #plt.show()
+                    plt.show()
                 # break
-            # break
+            break
 
     def convert_one_to_one(self, resize = 64):
         data = []
@@ -156,12 +156,12 @@ class FareMultipieLightingTripletsFrontal(data.Dataset):
                         img_list.append(path_img)
                         # print(ids, idl)
                         if session_name in session_maps:
-                            if ids in session_maps[session_name]:
-                                session_maps[session_name][ids].append([idl, path_img])
+                            if (ids, ide) in session_maps[session_name]:
+                                session_maps[session_name][(ids, ide)].append([idl, path_img])
                             else:
-                                session_maps[session_name][ids] = [[idl, path_img]]
+                                session_maps[session_name][(ids, ide)] = [[idl, path_img]]
                         else:
-                            session_maps[session_name] = {ids:[[idl, path_img]]}
+                            session_maps[session_name] = {(ids, ide):[[idl, path_img]]}
                         
                         # if ids in img_map:
                         #     img_map[ids].append((idl, path_img))
