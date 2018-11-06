@@ -42,7 +42,7 @@ parser.add_argument('-f',type=str,default= '', help='dummy input required for ju
 parser.add_argument('--modelPath', default='', help="path to model (to continue training)")
 
 if ON_SERVER:
-    out_path  = '/nfs/bigdisk/bsonawane/dae-5-out'
+    out_path  = '/nfs/bigdisk/bsonawane/dae-exp2-latent_single_transfer'
     data_path = '/nfs/bigdisk/zhshu/data/fare/real/multipie_select_batches/'
     # data_path = '/nfs/bigdisk/bsonawane/multipie-data/'
 else:
@@ -214,6 +214,8 @@ TrainingData.append(opt.dirDataroot + 'session01_03_select')
 TrainingData.append(opt.dirDataroot + 'session01_04_select')
 TrainingData.append(opt.dirDataroot + 'session01_05_select')
 TrainingData.append(opt.dirDataroot + 'session01_06_select')
+TrainingData.append(opt.dirDataroot + 'session01_07_select')
+
 
 '''
 TrainingData.append(opt.dirDataroot + 'celeba_split/img_01')
