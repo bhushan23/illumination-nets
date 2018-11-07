@@ -216,27 +216,35 @@ TrainingData.append(opt.dirDataroot + 'session01_05_select')
 TrainingData.append(opt.dirDataroot + 'session01_06_select')
 TrainingData.append(opt.dirDataroot + 'session01_07_select')
 
+TrainingData.append(opt.dirDataroot + 'session02_01_select')
+TrainingData.append(opt.dirDataroot + 'session02_02_select')
+TrainingData.append(opt.dirDataroot + 'session02_03_select')
+TrainingData.append(opt.dirDataroot + 'session02_04_select')
+TrainingData.append(opt.dirDataroot + 'session02_05_select')
+TrainingData.append(opt.dirDataroot + 'session02_06_select')
+TrainingData.append(opt.dirDataroot + 'session02_07_select')
 
-'''
-TrainingData.append(opt.dirDataroot + 'celeba_split/img_01')
-TrainingData.append(opt.dirDataroot + 'celeba_split/img_02')
-TrainingData.append(opt.dirDataroot + 'celeba_split/img_03')
-TrainingData.append(opt.dirDataroot + 'celeba_split/img_04')
-TrainingData.append(opt.dirDataroot + 'celeba_split/img_05')
-TrainingData.append(opt.dirDataroot + 'celeba_split/img_06')
-TrainingData.append(opt.dirDataroot + 'celeba_split/img_07')
-TrainingData.append(opt.dirDataroot + 'celeba_split/img_08')
-TrainingData.append(opt.dirDataroot + 'celeba_split/img_09')
-TrainingData.append(opt.dirDataroot + 'celeba_split/img_10')
-TrainingData.append(opt.dirDataroot + 'celeba_split/img_11')
-TrainingData.append(opt.dirDataroot + 'celeba_split/img_12')
-TrainingData.append(opt.dirDataroot + 'celeba_split/img_13')
-TrainingData.append(opt.dirDataroot + 'celeba_split/img_14')
-TrainingData.append(opt.dirDataroot + 'celeba_split/img_15')
-TrainingData.append(opt.dirDataroot + 'celeba_split/img_16')
-TrainingData.append(opt.dirDataroot + 'celeba_split/img_17')
-TrainingData.append(opt.dirDataroot + 'celeba_split/img_18')
-'''
+TrainingData.append(opt.dirDataroot + 'session03_01_select')
+TrainingData.append(opt.dirDataroot + 'session03_02_select')
+TrainingData.append(opt.dirDataroot + 'session03_03_select')
+TrainingData.append(opt.dirDataroot + 'session03_04_select')
+TrainingData.append(opt.dirDataroot + 'session03_05_select')
+
+TrainingData.append(opt.dirDataroot + 'session04_01_select')
+TrainingData.append(opt.dirDataroot + 'session04_02_select')
+TrainingData.append(opt.dirDataroot + 'session04_03_select')
+TrainingData.append(opt.dirDataroot + 'session04_04_select')
+TrainingData.append(opt.dirDataroot + 'session04_05_select')
+TrainingData.append(opt.dirDataroot + 'session04_06_select')
+TrainingData.append(opt.dirDataroot + 'session04_07_select')
+
+TrainingMask = []
+TrainingData.append(opt.dirDataroot + 'session01_masks')
+TrainingData.append(opt.dirDataroot + 'session02_masks')
+TrainingData.append(opt.dirDataroot + 'session03_masks')
+TrainingData.append(opt.dirDataroot + 'session04_masks')
+
+
 # Testing set
 TestingData = []
 TestingData.append(opt.dirDataroot + 'session01_select_test')
@@ -247,13 +255,13 @@ doTraining = True
 doTesting = True
 iter_mark=0
 
-dataset = lightDL.FareMultipieLightingTripletsFrontal(None, root=TrainingData, transform = None, resize=64)
+dataset = lightDL.FareMultipieLightingTripletsFrontal(None, root=TrainingData, root_mask = TrainingMask, transform = None, resize=64)
 # print('# size of the current (sub)dataset is %d' %len(dataset))
 # train_amount = train_amount + len(dataset)
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batchSize, shuffle=True, num_workers=int(opt.workers))
 
 
-dataset_test = lightDL.FareMultipieLightingTripletsFrontal(None, root=TestingData, transform = None, resize=64)
+dataset_test = lightDL.FareMultipieLightingTripletsFrontal(None, root=TestingData, root_mask = session01_masks, transform = None, resize=64)
 dataloader_test = torch.utils.data.DataLoader(dataset_test, batch_size=opt.batchSize, shuffle=True, num_workers=int(opt.workers))
 
 
