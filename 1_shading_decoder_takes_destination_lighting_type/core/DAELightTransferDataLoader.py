@@ -40,7 +40,7 @@ class FareMultipieLightingTripletsFrontal(data.Dataset):
             raise(RuntimeError("Found 0 images in: " + root + "\n"
                                "Supported image extensions are: " + ",".join(IMG_EXTENSIONS)))
         self.image_masks = self.make_dataset_mask_same_face_diff_light_multipie(root_mask)
-        print('Image Mask: ', self.image_masks)
+        # print('Image Mask: ', self.image_masks)
         self.root = root
         self.resize = resize
         # self.ids = img_to_id
@@ -73,6 +73,7 @@ class FareMultipieLightingTripletsFrontal(data.Dataset):
         for session_name, session_val in self.images.items():
             print('Session: ', session_name)
             current_session_mask = self.image_masks[session_name]
+            # print('Masks: ', current_session_mask)
             for image_id, val in session_val.items():
                 # print('In ', image_id)
                 new_list = list(itertools.combinations(val, 2))
