@@ -42,15 +42,15 @@ parser.add_argument('-f',type=str,default= '', help='dummy input required for ju
 parser.add_argument('--modelPath', default='', help="path to model (to continue training)")
 
 if ON_SERVER:
-    out_path  = '/nfs/bigdisk/bsonawane/dae-exp2-latent_single_transfer'
+    out_path  = '/nfs/bigdisk/bsonawane/dae-exp2-latent_single_transfer_mask_all'
     data_path = '/nfs/bigdisk/zhshu/data/fare/real/multipie_select_batches/'
     # data_path = '/nfs/bigdisk/bsonawane/multipie-data/'
 else:
     out_path  = '/home/bhushan/work/thesis/Sem2/source/experiment/illumination-nets/1_lighting_transfer_with_unknown_light_source/output'
     data_path = '/home/bhushan/work/thesis/Sem2/source/experiment/illumination-nets/data/multipie_select_batches/'
-parser.add_argument('--dirCheckpoints', default=out_path+'/checkpoints/DAE_CelebA', help='folder to model checkpoints')
-parser.add_argument('--dirImageoutput', default=out_path+'/images/DAE_CelebA', help='folder to output images')
-parser.add_argument('--dirTestingoutput', default=out_path+'/nfs/bigdisk/bsonawane/daeout/testing/DAE_CelebA', help='folder to testing results/images')
+parser.add_argument('--dirCheckpoints', default=out_path+'/checkpoints/dae-2', help='folder to model checkpoints')
+parser.add_argument('--dirImageoutput', default=out_path+'/images/train', help='folder to output images')
+parser.add_argument('--dirTestingoutput', default=out_path+'/testing', help='folder to testing results/images')
 parser.add_argument('--dirDataroot', default=data_path, help='folder to dataroot')
 parser.add_argument('--useDense', default = True, help='enables dense net architecture')
 opt = parser.parse_args()
@@ -238,16 +238,21 @@ TrainingData.append(opt.dirDataroot + 'session04_05_select')
 TrainingData.append(opt.dirDataroot + 'session04_06_select')
 TrainingData.append(opt.dirDataroot + 'session04_07_select')
 
+
 TrainingMask = []
-TrainingData.append(opt.dirDataroot + 'session01_masks')
-TrainingData.append(opt.dirDataroot + 'session02_masks')
-TrainingData.append(opt.dirDataroot + 'session03_masks')
-TrainingData.append(opt.dirDataroot + 'session04_masks')
+TrainingMask.append(opt.dirDataroot + 'session01_masks')
+TrainingMask.append(opt.dirDataroot + 'session02_masks')
+TrainingMask.append(opt.dirDataroot + 'session03_masks')
+TrainingMask.append(opt.dirDataroot + 'session04_masks')
+
 
 
 # Testing set
 TestingData = []
 TestingData.append(opt.dirDataroot + 'session01_select_test')
+
+TestingMask = []
+TestingMask.append(opt.dirDataroot + 'session01_masks')
 
 
 # ------------ training ------------ #
@@ -261,7 +266,7 @@ dataset = lightDL.FareMultipieLightingTripletsFrontal(None, root=TrainingData, r
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batchSize, shuffle=True, num_workers=int(opt.workers))
 
 
-dataset_test = lightDL.FareMultipieLightingTripletsFrontal(None, root=TestingData, root_mask = session01_masks, transform = None, resize=64)
+dataset_test = lightDL.FareMultipieLightingTripletsFrontal(None, root=TestingData, root_mask = TestingMask, transform = None, resize=64)
 dataloader_test = torch.utils.data.DataLoader(dataset_test, batch_size=opt.batchSize, shuffle=True, num_workers=int(opt.workers))
 
 
