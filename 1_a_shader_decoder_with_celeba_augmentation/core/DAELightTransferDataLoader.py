@@ -254,3 +254,102 @@ class FareMultipieLightingTripletsFrontal(data.Dataset):
         for i in range(len(self.ids)):
             if(self.ids[i] == ids and self.ide[i] == e and self.idp[i] == p and self.idl[i] == l):
                 return self.imgs[i]
+
+
+class CelebA_DataLoader(data.Dataset):
+
+    def __init__(self, dir_path, batch_size=32, resize=64, is_training=True):
+        self.dir = dir_path
+
+        self.batch_size = batch_size
+        self.resize = resize
+        self.train_image_list = self.list_dir()
+        assert len(self.train_image_list) != 0
+        self.test_image_list = self.train_image_list[int(0.7*len(self.train_image_list)):]
+        self.train_image_list = self.train_image_list[:int(0.7*len(self.train_image_list))]
+        print(len(self.train_image_list))
+        print(len(self.test_image_list))
+
+        random.shuffle(self.train_image_list)
+        random.shuffle(self.test_image_list)
+        self.is_training = is_training
+
+    def list_dir(self):
+        if os.path.isdir(self.dir):
+            folder_list = os.listdir(self.dir)
+            images_list = []
+            for folder in folder_list:
+                folder_path = os.path.join(self.dir, folder)
+                if os.path.isdir(folder_path):
+                    folder_image_list = os.listdir(os.path.join(self.dir, folder))
+                    for i in range(len(folder_image_list)):
+                        if is_image_file(folder_image_list[i]):
+                            images_list.append(os.path.join(folder, folder_image_list[i]))
+                    # images_list += folder_image_list
+            return images_list
+        else:
+            return []
+
+    def __len__(self):
+        if self.is_training:
+            return len(self.train_image_list)
+        else:
+            return len(self.test_image_list)
+
+    # def next_train(self):
+    #     """
+    #     Generate the next batch of training and validation samples
+    #     param: None
+    #     rtype: Numpy Array, dict, List(string)
+    #     """
+    #     idx = np.random.choice(np.arange(len(self.train_image_list)), self.batch_size, replace=False)
+    #     filepaths_batch = [self.train_image_list[i] for i in idx]
+    #
+    #     images = []
+    #
+    #     for img_path in filepaths_batch:
+    #         image = Image.open(os.path.join(self.dir, img_path))
+    #         image = image.convert('RGB')
+    #         image = image.resize((self.resize, self.resize), Image.ANTIALIAS)
+    #         image = image.astype(np.float32)
+    #         images.append(image)
+    #
+    #     images =  np.stack(images, axis=0)
+    #
+    #     return (np., images, 20, images)
+    #
+    # def next_test(self):
+    #     """
+    #     Generate the next batch of training and validation samples
+    #     param: None
+    #     rtype: Numpy Array, dict, List(string)
+    #     """
+    #     idx = np.random.choice(np.arange(len(self.test_image_list)), self.batch_size, replace=False)
+    #     filepaths_batch = [self.test_image_list[i] for i in idx]
+    #
+    #     images = []
+    #
+    #     for img_path in filepaths_batch:
+    #         image = Image.open(os.path.join(self.dir, img_path))
+    #         image = image.convert('RGB')
+    #         image = image.resize((self.resize, self.resize), Image.ANTIALIAS)
+    #         image = image.astype(np.float32)
+    #         images.append(image)
+    #
+    #     images = np.stack(images, axis=0)
+    #     return images
+
+    def __getitem__(self, index):
+        if self.is_training:
+            image_list = self.train_image_list
+        else:
+            image_list = self.test_image_list
+        if index < len(self.train_image_list):
+            image = Image.open(os.path.join(self.dir, image_list[index]))
+            image = image.convert('RGB')
+            image = image.resize((self.resize, self.resize), Image.ANTIALIAS)
+            image = np.array(image)
+            # image = image.astype(np.float32)
+            return (20, image, 20, image)
+        else:
+            return None, None, None, None

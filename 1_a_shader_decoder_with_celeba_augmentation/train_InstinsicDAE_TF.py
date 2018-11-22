@@ -42,7 +42,7 @@ parser.add_argument('-f',type=str,default= '', help='dummy input required for ju
 parser.add_argument('--modelPath', default='', help="path to model (to continue training)")
 
 if ON_SERVER:
-    out_path  = '/nfs/bigdisk/bsonawane/dae-exp1-dest-in-shader-decoder_mask_all'
+    out_path  = '/nfs/bigdisk/bsonawane/dae-exp1_a-dest-in-shader-decoder_mask_all'
     data_path = '/nfs/bigdisk/zhshu/data/fare/real/multipie_select_batches/'
     # data_path = '/nfs/bigdisk/bsonawane/multipie-data/'
 else:
@@ -53,6 +53,8 @@ parser.add_argument('--dirImageoutput', default=out_path+'/images/train', help='
 parser.add_argument('--dirTestingoutput', default=out_path+'/images/test', help='folder to testing results/images')
 parser.add_argument('--dirDataroot', default=data_path, help='folder to dataroot')
 parser.add_argument('--useDense', default = True, help='enables dense net architecture')
+parser.add_argument('--use_celeba', default=True, help='If true use celebA else Multipie')
+
 opt = parser.parse_args()
 
 
@@ -244,9 +246,9 @@ TrainingMask.append(opt.dirDataroot + 'session01_masks')
 TrainingMask.append(opt.dirDataroot + 'session02_masks')
 TrainingMask.append(opt.dirDataroot + 'session03_masks')
 TrainingMask.append(opt.dirDataroot + 'session04_masks')
-
-
-# Testing set
+#
+#
+# # Testing set
 TestingData = []
 TestingData.append(opt.dirDataroot + 'session01_select_test')
 
@@ -259,30 +261,46 @@ doTraining = True
 doTesting = True
 iter_mark=0
 
-dataset = lightDL.FareMultipieLightingTripletsFrontal(None, root=TrainingData, root_mask = TrainingMask, transform = None, resize=64)
+print("Loading Dataset")
+if opt.use_celeba:
+    train_dataset = lightDL.CelebA_DataLoader(dir_path=opt.dirDataroot, batch_size=32, resize=64, is_training=True)
+    test_dataset = lightDL.CelebA_DataLoader(dir_path=opt.dirDataroot, batch_size=32, resize=64, is_training=False)
+    dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=opt.batchSize, shuffle=True, num_workers=int(opt.workers))
+    dataloader_test = torch.utils.data.DataLoader(test_dataset, batch_size=opt.batchSize, shuffle=True, num_workers=int(opt.workers))
+else:
+    dataset = lightDL.FareMultipieLightingTripletsFrontal(None, root=TrainingData, root_mask=TrainingMask, transform = None, resize = 64)
+    # train_amount = train_amount + len(dataset)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batchSize, shuffle=True, num_workers=int(opt.workers))
+
+
+    dataset_test = lightDL.FareMultipieLightingTripletsFrontal(None, root=TestingData, root_mask = TestingMask, transform = None, resize=64)
+    dataloader_test = torch.utils.data.DataLoader(dataset_test, batch_size=opt.batchSize, shuffle=True, num_workers=int(opt.workers))
+print("Dataset Loaded")
+
+
 # print('# size of the current (sub)dataset is %d' %len(dataset))
 # train_amount = train_amount + len(dataset)
-dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batchSize, shuffle=True, num_workers=int(opt.workers))
+# dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batchSize, shuffle=True, num_workers=int(opt.workers))
+#
+#
+# dataset_test = lightDL.FareMultipieLightingTripletsFrontal(None, root=TestingData, root_mask = TestingMask, transform = None, resize=64)
+# dataloader_test = torch.utils.data.DataLoader(dataset_test, batch_size=opt.batchSize, shuffle=True, num_workers=int(opt.workers))
 
 
-dataset_test = lightDL.FareMultipieLightingTripletsFrontal(None, root=TestingData, root_mask = TestingMask, transform = None, resize=64)
-dataloader_test = torch.utils.data.DataLoader(dataset_test, batch_size=opt.batchSize, shuffle=True, num_workers=int(opt.workers))
-
-
-_, src_img, _, dest_img = next(iter(dataloader))
-
-src_img = parseSampledDataPoint(src_img, opt.nc)
-src_img = src_img.type(torch.cuda.FloatTensor)
-
-dest_img = parseSampledDataPoint(dest_img, opt.nc)
-dest_img = dest_img.type(torch.cuda.FloatTensor)
-
-visualizeAsImages(src_img.data.clone(), 
-                opt.dirImageoutput, 
-                filename='TEST_INIT_srcimg0', n_sample = 49, nrow=7, normalize=False)           
-visualizeAsImages(dest_img.data.clone(), 
-                opt.dirImageoutput, 
-                filename='TEST_INIT_destImg', n_sample = 49, nrow=7, normalize=False)           
+# _, src_img, _, dest_img = next(iter(dataloader))
+#
+# src_img = parseSampledDataPoint(src_img, opt.nc)
+# src_img = src_img.type(torch.cuda.FloatTensor)
+#
+# dest_img = parseSampledDataPoint(dest_img, opt.nc)
+# dest_img = dest_img.type(torch.cuda.FloatTensor)
+#
+# visualizeAsImages(src_img.data.clone(),
+#                 opt.dirImageoutput,
+#                 filename='TEST_INIT_srcimg0', n_sample = 49, nrow=7, normalize=False)
+# visualizeAsImages(dest_img.data.clone(),
+#                 opt.dirImageoutput,
+#                 filename='TEST_INIT_destImg', n_sample = 49, nrow=7, normalize=False)
 
 print('Log done')
 for epoch in range(opt.epoch_iter):
@@ -302,7 +320,7 @@ for epoch in range(opt.epoch_iter):
             dp0_img, dest_light, dest_img = data_point[1], data_point[2], data_point[3]
             # dest_img = dest_img.type(torch.cuda.FloatTensor)
             # dest_img = dest_img.permute(0, 3, 1, 2)
-            
+
             # print('dest_light: ', dest_light)
             dp0_img = parseSampledDataPoint(dp0_img, opt.nc)
             dp0_img = dp0_img.type(torch.cuda.FloatTensor)
@@ -343,44 +361,44 @@ for epoch in range(opt.epoch_iter):
             updator_decoders.step()
             updator_encoders.step()
 
-            loss_encdec = loss_recon.data[0] + loss_br.data[0] + loss_tvw.data[0] + loss_intr_S.data[0] 
+            loss_encdec = loss_recon.data[0] + loss_br.data[0] + loss_tvw.data[0] + loss_intr_S.data[0]
 
             train_loss += loss_encdec
-            
+
             iter_mark+=1
-            print('Iteration[%d] loss -- all:  %.4f .. recon:  %.4f .. tvw: %.4f .. br: %.4f .. intr_s: %.4f .. ' 
+            print('Iteration[%d] loss -- all:  %.4f .. recon:  %.4f .. tvw: %.4f .. br: %.4f .. intr_s: %.4f .. '
                 % (iter_mark,  loss_encdec, loss_recon.data[0], loss_tvw.data[0], loss_br.data[0], loss_intr_S.data[0]))
-        # visualzing training progress
-        gx = (dp0_W.data[:,0,:,:]+baseg.data[:,0,:,:]).unsqueeze(1).clone()
-        gy = (dp0_W.data[:,1,:,:]+baseg.data[:,1,:,:]).unsqueeze(1).clone()
-        visualizeAsImages(dp0_img.data.clone(), 
-            opt.dirImageoutput, 
-            filename='iter_'+str(iter_mark)+'_img0_', n_sample = 49, nrow=7, normalize=False)           
-        visualizeAsImages(dest_img.data.clone(), 
-            opt.dirImageoutput, 
-            filename='iter_'+str(iter_mark)+'_destImg_', n_sample = 49, nrow=7, normalize=False)           
-        visualizeAsImages(dp0_I.data.clone(), 
-            opt.dirImageoutput, 
-            filename='iter_'+str(iter_mark)+'_tex0_', n_sample = 49, nrow=7, normalize=False)
-        visualizeAsImages(dp0_S.data.clone(), 
-            opt.dirImageoutput, 
-            filename='iter_'+str(iter_mark)+'_intr_shade0_', n_sample = 49, nrow=7, normalize=False)
-        visualizeAsImages(dp0_T.data.clone(), 
-            opt.dirImageoutput, 
-            filename='iter_'+str(iter_mark)+'_intr_tex0_', n_sample = 49, nrow=7, normalize=False)
-        visualizeAsImages(dp0_output.data.clone(), 
-            opt.dirImageoutput, 
-            filename='iter_'+str(iter_mark)+'_output0_', n_sample = 49, nrow=7, normalize=False)   
-        visualizeAsImages((gx+1)/2, 
-            opt.dirImageoutput, 
-            filename='iter_'+str(iter_mark)+'_warp0x_', n_sample = 49, nrow=7, normalize=False)          
-        visualizeAsImages((gy+1)/2, 
-            opt.dirImageoutput, 
-            filename='iter_'+str(iter_mark)+'_warp0y_', n_sample = 49, nrow=7, normalize=False)   
-        if doTraining:
-         # do checkpointing
-         torch.save(encoders.state_dict(), '%s/wasp_model_epoch_encoders.pth' % (opt.dirCheckpoints))
-         torch.save(decoders.state_dict(), '%s/wasp_model_epoch_decoders.pth' % (opt.dirCheckpoints))
+            # visualzing training progress
+            gx = (dp0_W.data[:,0,:,:]+baseg.data[:,0,:,:]).unsqueeze(1).clone()
+            gy = (dp0_W.data[:,1,:,:]+baseg.data[:,1,:,:]).unsqueeze(1).clone()
+            visualizeAsImages(dp0_img.data.clone(),
+                opt.dirImageoutput,
+                filename='iter_'+str(iter_mark)+'_img0_', n_sample = 49, nrow=7, normalize=False)
+            visualizeAsImages(dest_img.data.clone(),
+                opt.dirImageoutput,
+                filename='iter_'+str(iter_mark)+'_destImg_', n_sample = 49, nrow=7, normalize=False)
+            visualizeAsImages(dp0_I.data.clone(),
+                opt.dirImageoutput,
+                filename='iter_'+str(iter_mark)+'_tex0_', n_sample = 49, nrow=7, normalize=False)
+            visualizeAsImages(dp0_S.data.clone(),
+                opt.dirImageoutput,
+                filename='iter_'+str(iter_mark)+'_intr_shade0_', n_sample = 49, nrow=7, normalize=False)
+            visualizeAsImages(dp0_T.data.clone(),
+                opt.dirImageoutput,
+                filename='iter_'+str(iter_mark)+'_intr_tex0_', n_sample = 49, nrow=7, normalize=False)
+            visualizeAsImages(dp0_output.data.clone(),
+                opt.dirImageoutput,
+                filename='iter_'+str(iter_mark)+'_output0_', n_sample = 49, nrow=7, normalize=False)
+            visualizeAsImages((gx+1)/2,
+                opt.dirImageoutput,
+                filename='iter_'+str(iter_mark)+'_warp0x_', n_sample = 49, nrow=7, normalize=False)
+            visualizeAsImages((gy+1)/2,
+                opt.dirImageoutput,
+                filename='iter_'+str(iter_mark)+'_warp0y_', n_sample = 49, nrow=7, normalize=False)
+            if doTraining:
+             # do checkpointing
+             torch.save(encoders.state_dict(), '%s/wasp_model_epoch_encoders.pth' % (opt.dirCheckpoints))
+             torch.save(decoders.state_dict(), '%s/wasp_model_epoch_decoders.pth' % (opt.dirCheckpoints))
 
      
         # ------------ testing ------------ #
