@@ -42,7 +42,7 @@ parser.add_argument('-f',type=str,default= '', help='dummy input required for ju
 parser.add_argument('--modelPath', default='', help="path to model (to continue training)")
 
 if ON_SERVER:
-    out_path  = '/nfs/bigdisk/bsonawane/dae-exp1_a-dest-in-shader-decoder_mask_all'
+    out_path  = '/nfs/bigdisk/bsonawane/dae-exp1_a_multipie-dest-in-shader-decoder_mask_all'
     data_path = '/nfs/bigdisk/zhshu/data/fare/real/multipie_select_batches/'
     # data_path = '/nfs/bigdisk/bsonawane/multipie-data/'
 else:
@@ -53,13 +53,13 @@ parser.add_argument('--dirImageoutput', default=out_path+'/images/train', help='
 parser.add_argument('--dirTestingoutput', default=out_path+'/images/test', help='folder to testing results/images')
 parser.add_argument('--dirDataroot', default=data_path, help='folder to dataroot')
 parser.add_argument('--useDense', default = True, help='enables dense net architecture')
-parser.add_argument('--use_celeba', default=True, help='If true use celebA else Multipie')
+parser.add_argument('--use_celeba', default=False, help='If true use celebA else Multipie')
 
 opt = parser.parse_args()
 
 
 # size of image
-opt.imgSize=64
+opt.imgSize = 64
 opt.cuda = True
 opt.use_dropout = 0
 opt.ngf = 32

@@ -435,6 +435,7 @@ class LightingTransfer(nn.Module):
         self.illumination_map[17] = [1] * 4 + [0] * 3 + ([1] * 5 + [0] * 2) * 5 + [1] * 4 + [0] * 3
         self.illumination_map[18] = [1] * 3 + [0] * 4 + ([1] * 6 + [0] * 1) * 5 + [1] * 3 + [0] * 4
         self.illumination_map[19] = [0]*49
+        self.illumination_map[20] = [0]*49
 
     def forward(self, light_direction, encoded_shading):
         illumination_vector = self.illumination_map[int(light_direction)]

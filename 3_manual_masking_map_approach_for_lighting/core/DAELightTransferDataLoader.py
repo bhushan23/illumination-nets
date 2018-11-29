@@ -35,11 +35,14 @@ class FareMultipieLightingTripletsFrontal(data.Dataset):
         resize = 64,
         transform=None, return_paths=False):
         self.opt = opt
-        sess_img_map = self.make_dataset_same_face_diff_light_multipie(root)
+        sess_img_map = self.make_dataset_same_face_diff_light_multipie_cropped(root)
         if len(sess_img_map) == 0:
             raise(RuntimeError("Found 0 images in: " + root + "\n"
                                "Supported image extensions are: " + ",".join(IMG_EXTENSIONS)))
-        self.image_masks = self.make_dataset_mask_same_face_diff_light_multipie(root_mask)
+        if len(root_mask) == 0:
+            self.image_masks = None
+        else:
+            self.image_masks = self.make_dataset_mask_same_face_diff_light_multipie(root_mask)
         # print('Image Mask: ', self.image_masks)
         self.root = root
         self.resize = resize
@@ -72,29 +75,33 @@ class FareMultipieLightingTripletsFrontal(data.Dataset):
         data = []
         for session_name, session_val in self.images.items():
             print('Session: ', session_name)
-            current_session_mask = self.image_masks[session_name]
+            if self.image_masks != None:
+                current_session_mask = self.image_masks[session_name]
             # print('Masks: ', current_session_mask)
             for image_id, val in session_val.items():
                 # print('In ', image_id)
                 new_list = list(itertools.combinations(val, 2))
                 # print(new_list)
-                current_image_mask = current_session_mask[image_id]
-                current_image_mask = torch.tensor(self.get_image(current_image_mask, resize = resize), dtype = torch.uint8)
-                current_image_mask /= 255
+                if self.image_masks != None:
+                    current_image_mask = current_session_mask[image_id]
+                    current_image_mask = torch.tensor(self.get_image(current_image_mask, resize = resize), dtype = torch.uint8)
+                    current_image_mask /= 255
                 for data_point in new_list:
                     # print(data_point[0], data_point[1])
                     # source1 = torch.zeros((19,))
                     # source1[int(data_point[0][0])] = 1
                     source1 = int(data_point[0][0])
                     image1  = torch.tensor(self.get_image(data_point[0][1], resize = resize))
-                    image1 *= current_image_mask
+                    if self.image_masks != None: 
+                        image1 *= current_image_mask
                     # image1  = image1.permute(2, 0, 1)
                     # source2 = torch.zeros((19,))
                     # source2[int(data_point[1][0])] = 1
                     source2 = int(data_point[1][0])
                     # source2 = int(data_point[1][0])
                     image2  = torch.tensor(self.get_image(data_point[1][1], resize = resize))
-                    image2 *= current_image_mask
+                    if self.image_masks != None:
+                        image2 *= current_image_mask
                     #image2  = image2.permute(2, 0, 1)
                     #vutils.save_image(image2, 
                     #    '/nfs/bigdisk/bsonawane/dae-5-out/Test_Out.png',
@@ -228,6 +235,62 @@ class FareMultipieLightingTripletsFrontal(data.Dataset):
                         # plt.show()
             # print(img_map)
         return session_maps #img_map
+
+    def make_dataset_same_face_diff_light_multipie_cropped(self, dirpath_root_list):
+        img_list = [] # list of path to images
+        ids_list = [] # list of ids of the images
+        ide_list = [] # list of expression of the images
+        idp_list = [] # list of pose/camera of the images
+        idl_list = [] # list of lighting of the images
+        session_maps = {} # list of images per session
+        # img_to_id = [] # stores main id for every image
+        print('Path:', dirpath_root_list)
+        # assert os.path.isdir(dirpath_root)
+        for dirpath_root in dirpath_root_list:
+            assert os.path.isdir(dirpath_root)
+            # img_map  = {} # maps ids to list of index in idl_list
+            # hack for finding session name
+            # Assuming directory structure
+            
+            st = dirpath_root
+            st = st[:st.rfind('_')]
+            session_name = st[st.find('session'):]
+            print('Loading:', dirpath_root, session_name)
+            for root, _, fnames in sorted(os.walk(dirpath_root)):
+                # print('ROOT:', folder)
+                for fname in fnames:
+                    # print('File: ', fname)
+                    if is_image_file(fname):
+                        ids, ide, idp, idl = self.parse_imgfilename_fare_multipie(fname)
+                        # Currently only working with pose
+                        if idp != '051':
+                            continue
+                        ids_list.append(ids)
+                        ide_list.append(ide)
+                        idp_list.append(idp)
+                        idl_list.append(idl)
+                        path_img = os.path.join(root, fname)
+                        img_list.append(path_img)
+                        # print(ids, idl)
+                        if session_name in session_maps:
+                            if (ids, ide) in session_maps[session_name]:
+                                session_maps[session_name][(ids, ide)].append([idl, path_img])
+                            else:
+                                session_maps[session_name][(ids, ide)] = [[idl, path_img]]
+                        else:
+                            session_maps[session_name] = {(ids, ide):[[idl, path_img]]}
+                        
+                        # if ids in img_map:
+                        #     img_map[ids].append((idl, path_img))
+                        # else:
+                        #     img_map[ids] = [(idl, path_img)]
+                        #img_to_id.append(ids)
+                        # img0 = self.get_image(path_img)
+                        # plt.imshow(img0)
+                        # plt.show()
+            # print(img_map)
+        return session_maps #img_map
+
 
     def get_Sample(self, filepath):
         # print(self.ids)

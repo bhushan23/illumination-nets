@@ -42,8 +42,9 @@ parser.add_argument('-f',type=str,default= '', help='dummy input required for ju
 parser.add_argument('--modelPath', default='', help="path to model (to continue training)")
 
 if ON_SERVER:
-    out_path  = '/nfs/bigdisk/bsonawane/3_manual_masking_map_approach_for_lighting'
-    data_path = '/nfs/bigdisk/zhshu/data/fare/real/multipie_select_batches/'
+    out_path = '/nfs/bigdisk/bsonawane/cropped_multipie/4_manual_masking_map_approach_for_lighting_only_multipie/'
+    # data_path = '/nfs/bigdisk/zhshu/data/fare/real/multipie_select_batches/'
+    data_path = '/nfs/bigmind/add_ssd/zhshu/data/Multipie/crops14/'
     # data_path = '/nfs/bigdisk/bsonawane/multipie-data/'
 else:
     out_path  = '/home/bhushan/work/thesis/Sem2/source/experiment/illumination-nets/1_lighting_transfer_with_unknown_light_source/output'
@@ -53,7 +54,7 @@ parser.add_argument('--dirImageoutput', default=out_path+'/images/train', help='
 parser.add_argument('--dirTestingoutput', default=out_path+'/images/test', help='folder to testing results/images')
 parser.add_argument('--dirDataroot', default=data_path, help='folder to dataroot')
 parser.add_argument('--useDense', default = True, help='enables dense net architecture')
-parser.add_argument('--use_celeba', default=True, help='If true use celebA else Multipie')
+parser.add_argument('--use_celeba', default= False, help='If true use celebA else Multipie')
 
 opt = parser.parse_args()
 
@@ -210,35 +211,39 @@ criterionSmoothL2   = DAENet.SelfSmoothLoss2(opt)
 
 # Training set
 TrainingData = []
+
+
+# Following dataset was used for previous experiments
+"""
 TrainingData.append(opt.dirDataroot + 'session01_01_select')
-# TrainingData.append(opt.dirDataroot + 'session01_02_select')
-# TrainingData.append(opt.dirDataroot + 'session01_03_select')
-# TrainingData.append(opt.dirDataroot + 'session01_04_select')
-# TrainingData.append(opt.dirDataroot + 'session01_05_select')
-# TrainingData.append(opt.dirDataroot + 'session01_06_select')
-# TrainingData.append(opt.dirDataroot + 'session01_07_select')
-#
-# TrainingData.append(opt.dirDataroot + 'session02_01_select')
-# TrainingData.append(opt.dirDataroot + 'session02_02_select')
-# TrainingData.append(opt.dirDataroot + 'session02_03_select')
-# TrainingData.append(opt.dirDataroot + 'session02_04_select')
-# TrainingData.append(opt.dirDataroot + 'session02_05_select')
-# TrainingData.append(opt.dirDataroot + 'session02_06_select')
-# TrainingData.append(opt.dirDataroot + 'session02_07_select')
-#
-# TrainingData.append(opt.dirDataroot + 'session03_01_select')
-# TrainingData.append(opt.dirDataroot + 'session03_02_select')
-# TrainingData.append(opt.dirDataroot + 'session03_03_select')
-# TrainingData.append(opt.dirDataroot + 'session03_04_select')
-# TrainingData.append(opt.dirDataroot + 'session03_05_select')
-#
-# TrainingData.append(opt.dirDataroot + 'session04_01_select')
-# TrainingData.append(opt.dirDataroot + 'session04_02_select')
-# TrainingData.append(opt.dirDataroot + 'session04_03_select')
-# TrainingData.append(opt.dirDataroot + 'session04_04_select')
-# TrainingData.append(opt.dirDataroot + 'session04_05_select')
-# TrainingData.append(opt.dirDataroot + 'session04_06_select')
-# TrainingData.append(opt.dirDataroot + 'session04_07_select')
+TrainingData.append(opt.dirDataroot + 'session01_02_select')
+TrainingData.append(opt.dirDataroot + 'session01_03_select')
+TrainingData.append(opt.dirDataroot + 'session01_04_select')
+TrainingData.append(opt.dirDataroot + 'session01_05_select')
+TrainingData.append(opt.dirDataroot + 'session01_06_select')
+TrainingData.append(opt.dirDataroot + 'session01_07_select')
+
+TrainingData.append(opt.dirDataroot + 'session02_01_select')
+TrainingData.append(opt.dirDataroot + 'session02_02_select')
+TrainingData.append(opt.dirDataroot + 'session02_03_select')
+TrainingData.append(opt.dirDataroot + 'session02_04_select')
+TrainingData.append(opt.dirDataroot + 'session02_05_select')
+TrainingData.append(opt.dirDataroot + 'session02_06_select')
+TrainingData.append(opt.dirDataroot + 'session02_07_select')
+
+TrainingData.append(opt.dirDataroot + 'session03_01_select')
+TrainingData.append(opt.dirDataroot + 'session03_02_select')
+TrainingData.append(opt.dirDataroot + 'session03_03_select')
+TrainingData.append(opt.dirDataroot + 'session03_04_select')
+TrainingData.append(opt.dirDataroot + 'session03_05_select')
+
+TrainingData.append(opt.dirDataroot + 'session04_01_select')
+TrainingData.append(opt.dirDataroot + 'session04_02_select')
+TrainingData.append(opt.dirDataroot + 'session04_03_select')
+TrainingData.append(opt.dirDataroot + 'session04_04_select')
+TrainingData.append(opt.dirDataroot + 'session04_05_select')
+TrainingData.append(opt.dirDataroot + 'session04_06_select')
+TrainingData.append(opt.dirDataroot + 'session04_07_select')
 
 
 TrainingMask = []
@@ -254,7 +259,19 @@ TestingData.append(opt.dirDataroot + 'session01_select_test')
 
 TestingMask = []
 TestingMask.append(opt.dirDataroot + 'session01_masks')
+"""
 
+TrainingData = []
+TrainingData.append(opt.dirDataroot + 'session01_crops14')
+TrainingData.append(opt.dirDataroot + 'session02_crops14')
+TrainingData.append(opt.dirDataroot + 'session03_crops14')
+TrainingData.append(opt.dirDataroot + 'session04_crops14')
+
+TestingData = []
+TestingData.append(opt.dirDataroot + 'session_test_crops14')
+
+TrainingMask = []
+TestingMask = []
 
 # ------------ training ------------ #
 doTraining = True
@@ -377,24 +394,24 @@ for epoch in range(opt.epoch_iter):
             visualizeAsImages(dest_img.data.clone(),
                 opt.dirImageoutput,
                 filename='iter_'+str(iter_mark)+'_destImg_', n_sample = 49, nrow=7, normalize=False)
-            visualizeAsImages(dp0_I.data.clone(),
-                opt.dirImageoutput,
-                filename='iter_'+str(iter_mark)+'_tex0_', n_sample = 49, nrow=7, normalize=False)
-            visualizeAsImages(dp0_S.data.clone(),
-                opt.dirImageoutput,
-                filename='iter_'+str(iter_mark)+'_intr_shade0_', n_sample = 49, nrow=7, normalize=False)
-            visualizeAsImages(dp0_T.data.clone(),
-                opt.dirImageoutput,
-                filename='iter_'+str(iter_mark)+'_intr_tex0_', n_sample = 49, nrow=7, normalize=False)
+            #visualizeAsImages(dp0_I.data.clone(),
+            #    opt.dirImageoutput,
+            #    filename='iter_'+str(iter_mark)+'_tex0_', n_sample = 49, nrow=7, normalize=False)
+            #visualizeAsImages(dp0_S.data.clone(),
+            #    opt.dirImageoutput,
+            #    filename='iter_'+str(iter_mark)+'_intr_shade0_', n_sample = 49, nrow=7, normalize=False)
+            #visualizeAsImages(dp0_T.data.clone(),
+            #    opt.dirImageoutput,
+            #    filename='iter_'+str(iter_mark)+'_intr_tex0_', n_sample = 49, nrow=7, normalize=False)
             visualizeAsImages(dp0_output.data.clone(),
                 opt.dirImageoutput,
                 filename='iter_'+str(iter_mark)+'_output0_', n_sample = 49, nrow=7, normalize=False)
-            visualizeAsImages((gx+1)/2,
-                opt.dirImageoutput,
-                filename='iter_'+str(iter_mark)+'_warp0x_', n_sample = 49, nrow=7, normalize=False)
-            visualizeAsImages((gy+1)/2,
-                opt.dirImageoutput,
-                filename='iter_'+str(iter_mark)+'_warp0y_', n_sample = 49, nrow=7, normalize=False)
+            #visualizeAsImages((gx+1)/2,
+            #    opt.dirImageoutput,
+            #    filename='iter_'+str(iter_mark)+'_warp0x_', n_sample = 49, nrow=7, normalize=False)
+            #visualizeAsImages((gy+1)/2,
+            #    opt.dirImageoutput,
+            #    filename='iter_'+str(iter_mark)+'_warp0y_', n_sample = 49, nrow=7, normalize=False)
             if doTraining:
              # do checkpointing
              torch.save(encoders.state_dict(), '%s/wasp_model_epoch_encoders.pth' % (opt.dirCheckpoints))
@@ -409,6 +426,8 @@ for epoch in range(opt.epoch_iter):
         testing_loss=0
         gc.collect() # collect garbage
         if doTesting:
+           encoders.train()
+           decoders.train()
            for batch_idx, data_point in enumerate(dataloader_test, 0):
                #raw_input("Press Enter to continue...")
                gc.collect() # collect garbage
@@ -453,34 +472,34 @@ for epoch in range(opt.epoch_iter):
                
                print('Iteration[%d] loss -- all:  %.4f .. recon:  %.4f .. tvw: %.4f .. br: %.4f .. intr_s: %.4f .. ' 
                    % (iter_mark,  loss_encdec, loss_recon.data[0], loss_tvw.data[0], loss_br.data[0], loss_intr_S.data[0]))
-           # visualzing training progress
-           print('Storing:' )
-           gx = (dp0_W.data[:,0,:,:]+baseg.data[:,0,:,:]).unsqueeze(1).clone()
-           gy = (dp0_W.data[:,1,:,:]+baseg.data[:,1,:,:]).unsqueeze(1).clone()
-           visualizeAsImages(dp0_img.data.clone(), 
-               opt.dirTestingoutput, 
-               filename='img0_', n_sample = 49, nrow=7, normalize=False)           
-           visualizeAsImages(dp0_I.data.clone(), 
-               opt.dirTestingoutput, 
-               filename='tex0_', n_sample = 49, nrow=7, normalize=False)
-           visualizeAsImages(dest_img.data.clone(), 
-               opt.dirTestingoutput, 
-               filename='expected_output0_', n_sample = 49, nrow=7, normalize=False)           
-           visualizeAsImages(dp0_S.data.clone(), 
-               opt.dirTestingoutput, 
-               filename='intr_shade0_', n_sample = 49, nrow=7, normalize=False)
-           visualizeAsImages(dp0_T.data.clone(), 
-               opt.dirTestingoutput, 
-               filename='intr_tex0_', n_sample = 49, nrow=7, normalize=False)
-           visualizeAsImages(dp0_output.data.clone(), 
-               opt.dirTestingoutput, 
-               filename='output0_', n_sample = 49, nrow=7, normalize=False)   
-           visualizeAsImages((gx+1)/2, 
-               opt.dirTestingoutput, 
-               filename='warp0x_', n_sample = 49, nrow=7, normalize=False)          
-           visualizeAsImages((gy+1)/2, 
-               opt.dirTestingoutput, 
-               filename='warp0y_', n_sample = 49, nrow=7, normalize=False)   
+               # visualzing training progress
+               print('Storing:' )
+               gx = (dp0_W.data[:,0,:,:]+baseg.data[:,0,:,:]).unsqueeze(1).clone()
+               gy = (dp0_W.data[:,1,:,:]+baseg.data[:,1,:,:]).unsqueeze(1).clone()
+               visualizeAsImages(dp0_img.data.clone(), 
+                   opt.dirTestingoutput, 
+                   filename='img0_'+str(iter_mark), n_sample = 49, nrow=7, normalize=False)           
+               #visualizeAsImages(dp0_I.data.clone(), 
+               #    opt.dirTestingoutput, 
+               #    filename='tex0_'+str(iter_mark), n_sample = 49, nrow=7, normalize=False)
+               visualizeAsImages(dest_img.data.clone(), 
+                   opt.dirTestingoutput, 
+                   filename='expected_output0_'+str(iter_mark), n_sample = 49, nrow=7, normalize=False)           
+               #visualizeAsImages(dp0_S.data.clone(), 
+               #    opt.dirTestingoutput, 
+               #    filename='intr_shade0_'+str(iter_mark), n_sample = 49, nrow=7, normalize=False)
+               #visualizeAsImages(dp0_T.data.clone(), 
+               #    opt.dirTestingoutput, 
+               #    filename='intr_tex0_'+str(iter_mark), n_sample = 49, nrow=7, normalize=False)
+               visualizeAsImages(dp0_output.data.clone(), 
+                   opt.dirTestingoutput, 
+                   filename='output0_'+str(iter_mark), n_sample = 49, nrow=7, normalize=False)   
+               #visualizeAsImages((gx+1)/2, 
+               #    opt.dirTestingoutput, 
+               #    filename='warp0x_'+str(iter_mark), n_sample = 49, nrow=7, normalize=False)          
+               #visualizeAsImages((gy+1)/2, 
+               #    opt.dirTestingoutput, 
+               #    filename='warp0y_'+str(iter_mark), n_sample = 49, nrow=7, normalize=False)   
            # put testing code here #
            gc.collect() # collect garbage
 
