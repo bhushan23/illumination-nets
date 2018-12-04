@@ -277,7 +277,8 @@ class DenseBlockDecoder(nn.Module):
         self.layers = nn.ModuleList()
         for i in range(n_convs):
             self.layers.append(nn.Sequential(
-                    nn.BatchNorm2d(n_channels),
+                    # nn.BatchNorm2d(n_channels),
+                    nn.InstanceNorm2d(n_channels),
                     activation(*args),
                     nn.ConvTranspose2d(n_channels, n_channels, 3, stride=1, padding=1, bias=False),))
 
@@ -332,7 +333,8 @@ class waspDenseEncoder(nn.Module):
 
         self.main = nn.Sequential(
                 # input is (nc) x 64 x 64
-                nn.BatchNorm2d(nc),
+                # nn.BatchNorm2d(nc),
+                nn.InstanceNorm2d(nc),
                 nn.ReLU(True),
                 nn.Conv2d(nc, ndf, 4, stride=2, padding=1),
 
@@ -450,7 +452,8 @@ class waspDenseDecoder(nn.Module):
         self.ngpu   = ngpu
         self.main   = nn.Sequential(
             # input is Z, going into convolution
-            nn.BatchNorm2d(nz),
+            # nn.BatchNorm2d(nz),
+            nn.InstanceNorm2d(nz),
             activation(*args),
             nn.ConvTranspose2d(nz, ngf * 8, 4, 1, 0, bias=False),
 
@@ -471,7 +474,8 @@ class waspDenseDecoder(nn.Module):
             DenseTransitionBlockDecoder(ngf, ngf),
 
             # state size (ngf) x 64 x 64
-            nn.BatchNorm2d(ngf),
+            # nn.BatchNorm2d(ngf),
+            nn.InstanceNorm2d(ngf),
             activation(*args),
             nn.ConvTranspose2d(ngf, nc, 3, stride=1, padding=1, bias=False),
             f_activation(*f_args),
