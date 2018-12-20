@@ -9,7 +9,7 @@ from torch.autograd import Variable
 from torch.autograd import gradcheck
 from torch.autograd import Function
 import numpy as np
-
+import pdb
 
 ###################################
 ######### loss functions ##########
@@ -383,25 +383,35 @@ class LightingTransfer(nn.Module):
 
     def forward(self, light_direction, encoded_shading):
         light_space = self.generate_light_space(light_direction)
-        print('Generation Done:', light_space.shape, encoded_shading.shape)
+        # print('Generation Done:', light_space.shape, encoded_shading.shape)
         new_input   = torch.cat((light_space, encoded_shading), 1)
         return self.main(new_input)
 '''
-
-# One hot vector for lighting
+'''
+# CNN based lighting transfer in latent space
 class LightingTransfer(nn.Module):
-    def __init__(self, opt, ngpu=1, nz=128, activation=nn.ReLU, args=[False]):
+    def __init__(self, opt, ngpu=1, nz=16, activation=nn.ReLU, args=[False]):
         super(LightingTransfer, self).__init__()
         self.ngpu = ngpu
-        self.generate_light_space = nn.Sequential(
-            nn.Linear(19, nz),
-            nn.BatchNorm1d(nz),
+        self.illumination_map = {}
+        self.fill_illlumination_map()
+        self.generate_light_space_cnn = nn.Sequential(
+            nn.Conv2d(in_channels = 1, out_channels = 3, kernel_size = 5, stride = 2, padding = 2),
             nn.ReLU(*args),
-            nn.Linear(nz, nz),
-            nn.BatchNorm1d(nz),
+            nn.InstanceNorm2d(3),
+            nn.Conv2d(in_channels=3, out_channels=3, kernel_size=4, stride=2, padding=1),
             nn.ReLU(*args),
-            nn.Linear(nz, nz)
+            nn.InstanceNorm2d(3),
+            nn.Conv2d(in_channels=3, out_channels=3, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(*args),
+            nn.InstanceNorm2d(3),
+            nn.Conv2d(in_channels=3, out_channels=3, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(*args)
         )
+        self.generate_light_space_fc = nn.Sequential(
+            nn.Linear(48, 16)
+        )
+
         self.main = nn.Sequential(
             nn.Linear(nz+opt.sdim, nz),
             nn.BatchNorm1d(nz),
@@ -412,11 +422,114 @@ class LightingTransfer(nn.Module):
             nn.Linear(nz, opt.sdim)
         )
 
+    def fill_illlumination_map(self):
+        illumination_map    = [[]] * 20
+        illumination_map[0] = [[0] * 63 for i in range(63)]
+        illumination_map[1] = [[0] * 54 + [1] * 9 for i in range(63)]
+        illumination_map[2] = [[0] * 45 + [1] * 18 for i in range(63)]
+        illumination_map[3] = [[0] * 36 + [1] * 27 for i in range(63)]
+        illumination_map[4] = [[0] * 27 + [1] * 36 for i in range(63)]
+        illumination_map[5] = [[0] * 18 + [1] * 45 for i in range(63)]
+        illumination_map[6] = [[0] * 9 + [1] * 54 for i in range(63)]
+        illumination_map[7] = [[0] * 0 + [1] * 63 for i in range(63)]
+        illumination_map[8] = [[1] * 54 + [0] * 9 for i in range(63)]
+        illumination_map[9] = [[1] * 45 + [0] * 18 for i in range(63)]
+        illumination_map[10] = [[1] * 36 + [0] * 27 for i in range(63)]
+        illumination_map[11] = [[1] * 27 + [0] * 36 for i in range(63)]
+        illumination_map[12] = [[1] * 18 + [0] * 45 for i in range(63)]
+        illumination_map[13] = [[1] * 9 + [0] * 54 for i in range(63)]
+        illumination_map[14] = [[0] * 27 + [1] * 36 for i in range(9)] + [[0] * 18 + [1] * 45 for i in range(45)] + [[0] * 27 + [1] * 36 for i in range(9)]
+        illumination_map[15] = [[0] * 27 + [1] * 36 for i in range(9)] + [[0] * 9 + [1] * 54 for i in range(45)] + [[0] * 27 + [1] * 36 for i in range(9)]
+        illumination_map[16] = [[0] * 9 + [1] * 45 + [0] * 9 for i in range(45)] + [[0] * 18 + [1] * 27 + [0] * 18 for i in range(18)]
+        illumination_map[17] = [[1] * 36 + [0] * 27 for i in range(9)] + [[1] * 45 + [0] * 18 for i in range(45)] + [[1] * 36 + [0] * 27 for i in range(9)]
+        illumination_map[18] = [[1] * 36 + [0] * 27 for i in range(9)] + [[1] * 9 + [0] * 54 for i in range(45)] + [[1] * 27 + [0] * 36 for i in range(9)]
+        illumination_map[19] = [[0] * 63 for i in range(63)]
+        self.illumination_map = torch.tensor(illumination_map).type(torch.cuda.FloatTensor)
+        b_size, h, w          = self.illumination_map.shape
+        self.illumination_map = torch.reshape(self.illumination_map, (b_size, 1, h, w))
+
     def forward(self, light_direction, encoded_shading):
-        light_space = self.generate_light_space(light_direction)
+        light_direction  = torch.tensor(light_direction).type(torch.long)
+        illumination_map = self.illumination_map[light_direction]
+        illumination_map = torch.tensor(illumination_map).type(torch.cuda.FloatTensor)
+        # print('Illumination Vector' , illumination_map.shape)
+        light_space = self.generate_light_space_cnn(illumination_map)
+        light_space = light_space.view(-1, 48)
+        light_space = self.generate_light_space_fc(light_space)
         # print('Generation Done:', light_space.shape, encoded_shading.shape)
         new_input   = torch.cat((light_space, encoded_shading), 1)
         return self.main(new_input)
+'''
+# CNN based lighting transfer in latent space
+class LightingTransfer(nn.Module):
+    def __init__(self, opt, ngpu=1, nz=128, activation=nn.ReLU, args=[False]):
+        super(LightingTransfer, self).__init__()
+        self.ngpu = ngpu
+        self.illumination_map = {}
+        self.fill_illlumination_map()
+        self.generate_light_space_cnn = nn.Sequential(
+            nn.Conv2d(in_channels = 1, out_channels = 3, kernel_size = 5, stride = 2, padding = 2),
+            nn.ReLU(*args),
+            nn.InstanceNorm2d(3),
+            nn.Conv2d(in_channels=3, out_channels=3, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(*args),
+            nn.InstanceNorm2d(3),
+            nn.Conv2d(in_channels=3, out_channels=3, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(*args),
+        )
+        self.generate_light_space_fc = nn.Sequential(
+            nn.Linear(192, nz)
+        )
+
+        self.main = nn.Sequential(
+            nn.Linear(nz+opt.sdim, nz),
+            nn.BatchNorm1d(nz),
+            nn.ReLU(*args),
+            nn.Linear(nz, nz),
+            nn.BatchNorm1d(nz),
+            nn.ReLU(*args),
+            nn.Linear(nz, opt.sdim)
+        )
+
+    def fill_illlumination_map(self):
+        illumination_map    = [[]] * 20
+        illumination_map[0] = [[0] * 63 for i in range(63)]
+        illumination_map[1] = [[0] * 54 + [1] * 9 for i in range(63)]
+        illumination_map[2] = [[0] * 45 + [1] * 18 for i in range(63)]
+        illumination_map[3] = [[0] * 36 + [1] * 27 for i in range(63)]
+        illumination_map[4] = [[0] * 27 + [1] * 36 for i in range(63)]
+        illumination_map[5] = [[0] * 18 + [1] * 45 for i in range(63)]
+        illumination_map[6] = [[0] * 9 + [1] * 54 for i in range(63)]
+        illumination_map[7] = [[0] * 0 + [1] * 63 for i in range(63)]
+        illumination_map[8] = [[1] * 54 + [0] * 9 for i in range(63)]
+        illumination_map[9] = [[1] * 45 + [0] * 18 for i in range(63)]
+        illumination_map[10] = [[1] * 36 + [0] * 27 for i in range(63)]
+        illumination_map[11] = [[1] * 27 + [0] * 36 for i in range(63)]
+        illumination_map[12] = [[1] * 18 + [0] * 45 for i in range(63)]
+        illumination_map[13] = [[1] * 9 + [0] * 54 for i in range(63)]
+        illumination_map[14] = [[0] * 27 + [1] * 36 for i in range(9)] + [[0] * 18 + [1] * 45 for i in range(45)] + [[0] * 27 + [1] * 36 for i in range(9)]
+        illumination_map[15] = [[0] * 27 + [1] * 36 for i in range(9)] + [[0] * 9 + [1] * 54 for i in range(45)] + [[0] * 27 + [1] * 36 for i in range(9)]
+        illumination_map[16] = [[0] * 9 + [1] * 45 + [0] * 9 for i in range(45)] + [[0] * 18 + [1] * 27 + [0] * 18 for i in range(18)]
+        illumination_map[17] = [[1] * 36 + [0] * 27 for i in range(9)] + [[1] * 45 + [0] * 18 for i in range(45)] + [[1] * 36 + [0] * 27 for i in range(9)]
+        illumination_map[18] = [[1] * 36 + [0] * 27 for i in range(9)] + [[1] * 9 + [0] * 54 for i in range(45)] + [[1] * 27 + [0] * 36 for i in range(9)]
+        illumination_map[19] = [[0] * 63 for i in range(63)]
+        self.illumination_map = torch.tensor(illumination_map).type(torch.cuda.FloatTensor)
+        b_size, h, w          = self.illumination_map.shape
+        self.illumination_map = torch.reshape(self.illumination_map, (b_size, 1, h, w))
+
+    def forward(self, light_direction, encoded_shading):
+        light_direction  = torch.tensor(light_direction).type(torch.long)
+        illumination_map = self.illumination_map[light_direction]
+        illumination_map = torch.tensor(illumination_map).type(torch.cuda.FloatTensor)
+        # print('Illumination Vector' , illumination_map.shape)
+        light_space = self.generate_light_space_cnn(illumination_map)
+        light_space = light_space.view(-1, 192)
+        light_space = self.generate_light_space_fc(light_space)
+        # print('Generation Done:', light_space.shape, encoded_shading.shape)
+        new_input   = torch.cat((light_space, encoded_shading), 1)
+        return self.main(new_input)
+
+
 
 class waspDenseDecoder(nn.Module):
     def __init__(self, opt, ngpu=1, nz=128, nc=1, ngf=32, lb=0, ub=1, activation=nn.ReLU, args=[False], f_activation=nn.Hardtanh, f_args=[0,1]):
@@ -612,11 +725,11 @@ class Dense_DecodersIntegralWarper2_Intrinsic(nn.Module):
         self.imagedimension = opt.imgSize
         self.ngpu = opt.ngpu
         self.idim = opt.idim
-        self.sdim = opt.sdim + 1
+        self.sdim = opt.sdim
         self.tdim = opt.tdim
         self.wdim = opt.wdim
         # Lighting Net
-        # self.lightNet = LightingTransfer(opt)
+        self.lightNet = LightingTransfer(opt)
         # shading decoder
         self.decoderS = waspDenseDecoder(opt, ngpu=self.ngpu, nz=self.sdim, nc=1, ngf=opt.ngf, lb=0, ub=1)
         # albedo decoder
@@ -631,11 +744,7 @@ class Dense_DecodersIntegralWarper2_Intrinsic(nn.Module):
         self.integrator = waspGridSpatialIntegral(opt)
         self.cutter = nn.Hardtanh(-1,1)
     def forward(self, lightingDirection, zS, zT, zW, basegrid):
-        ld           = torch.tensor(lightingDirection).type(torch.cuda.FloatTensor)
-        ld           = ld.reshape(ld.shape[0], 1)
-        newZS        = torch.cat((zS, ld), 1)
-        # print('LD SHAPE:', zT.shape, newZS.shape)
-        # newZS       = self.lightNet(ld, zS)
+        newZS        = self.lightNet(lightingDirection, zS)
         self.shading = self.decoderS(newZS.view(-1,self.sdim,1,1))
         self.texture = self.decoderT(zT.view(-1,self.tdim,1,1))
         self.img     = self.intrinsicComposer(self.shading, self.texture)

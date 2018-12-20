@@ -42,7 +42,7 @@ parser.add_argument('-f',type=str,default= '', help='dummy input required for ju
 parser.add_argument('--modelPath', default='', help="path to model (to continue training)")
 
 if ON_SERVER:
-    out_path = './results_CNN_Latent_128/'  # '/nfs/bigdisk/bsonawane/LightTransfer_Exp/Latent_Space/2_CNN_64/'    #cropped_multipie/4_manual_masking_map_approach_for_lighting_only_multipie_cropped_63/'
+    out_path = './results_CNN_Latent_128_Pose/'  # '/nfs/bigdisk/bsonawane/LightTransfer_Exp/Latent_Space/2_CNN_64/'    #cropped_multipie/4_manual_masking_map_approach_for_lighting_only_multipie_cropped_63/'
     # data_path = '/nfs/bigdisk/zhshu/data/fare/real/multipie_select_batches/'
     data_path = '/nfs/bigmind/add_ssd/zhshu/data/Multipie/crops14/'
     # data_path = '/nfs/bigdisk/multipie_cropped/'
