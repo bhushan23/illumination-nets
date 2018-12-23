@@ -492,7 +492,7 @@ class LightingTransfer(nn.Module):
         )
 
     def fill_illlumination_map(self):
-        illumination_map    = [[]] * 28
+        illumination_map    = [[]] * 20
         illumination_map[0] = [[0] * 63 for i in range(63)]
         illumination_map[1] = [[0] * 54 + [1] * 9 for i in range(63)]
         illumination_map[2] = [[0] * 45 + [1] * 18 for i in range(63)]
@@ -513,14 +513,6 @@ class LightingTransfer(nn.Module):
         illumination_map[17] = [[1] * 36 + [0] * 27 for i in range(9)] + [[1] * 45 + [0] * 18 for i in range(45)] + [[1] * 36 + [0] * 27 for i in range(9)]
         illumination_map[18] = [[1] * 36 + [0] * 27 for i in range(9)] + [[1] * 9 + [0] * 54 for i in range(45)] + [[1] * 27 + [0] * 36 for i in range(9)]
         illumination_map[19] = [[0] * 63 for i in range(63)]
-        illumination_map[20] = [[1] * 9 + [0] * 45 + [1] * 9 for i in range(63)]
-        illumination_map[21] = [[1] * 18 + [0] * 27 + [1] * 18 for i in range(63)]
-        illumination_map[22] = [[1] * 27 + [0] * 9 + [1] * 27 for i in range(63)]
-        illumination_map[23] = [[1] * 63 for i in range(18)] + [[0] * 63 for i in range(27)] + [[1] * 63 for i in range(18)]
-        illumination_map[24] = [[1] * 63 for i in range(9)] + [[0] * 63 for i in range(45)] + [[1] * 63 for i in range(9)]
-        illumination_map[25] = generate_circle(5)
-        illumination_map[26] = generate_circle(20)
-        illumination_map[27] = generate_circle(30)
         self.illumination_map = torch.tensor(illumination_map).type(torch.cuda.FloatTensor)
         b_size, h, w          = self.illumination_map.shape
         self.illumination_map = torch.reshape(self.illumination_map, (b_size, 1, h, w))
@@ -536,17 +528,6 @@ class LightingTransfer(nn.Module):
         # print('Generation Done:', light_space.shape, encoded_shading.shape)
         new_input   = torch.cat((light_space, encoded_shading), 1)
         return self.main(new_input)
-
-def generate_circle(r=5):
-    l = [[0]*63 for i in range(63)]
-    cx,cy = 32,32
-    for i in range(63):
-        for j in range(63):
-            if (i-cx)**2 + (j-cy)**2 < r**2:
-                l[i][j] = 1
-            else:
-                l[i][j] = 0
-    return l
 
 
 

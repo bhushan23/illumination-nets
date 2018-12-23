@@ -629,7 +629,7 @@ class Dense_DecodersIntegralWarper2_Intrinsic(nn.Module):
         self.integrator = waspGridSpatialIntegral(opt)
         self.cutter = nn.Hardtanh(-1,1)
     def forward(self, lightingDirection, zS, zT, zW, basegrid):
-        ld           = lightingDirection.type(torch.cuda.FloatTensor)
+        ld           = torch.tensor(lightingDirection).type(torch.cuda.FloatTensor)
         ld           = ld.reshape(ld.shape[0], 1)
         newZS        = self.lightNet(ld, zS)
         self.shading = self.decoderS(newZS.view(-1,self.sdim,1,1))

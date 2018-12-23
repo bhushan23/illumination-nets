@@ -387,7 +387,7 @@ class LightingTransfer(nn.Module):
         new_input   = torch.cat((light_space, encoded_shading), 1)
         return self.main(new_input)
 '''
-
+'''
 # CNN based lighting transfer in latent space
 class LightingTransfer(nn.Module):
     def __init__(self, opt, ngpu=1, nz=16, activation=nn.ReLU, args=[False]):
@@ -528,7 +528,6 @@ class LightingTransfer(nn.Module):
         # print('Generation Done:', light_space.shape, encoded_shading.shape)
         new_input   = torch.cat((light_space, encoded_shading), 1)
         return self.main(new_input)
-'''
 
 
 class waspDenseDecoder(nn.Module):

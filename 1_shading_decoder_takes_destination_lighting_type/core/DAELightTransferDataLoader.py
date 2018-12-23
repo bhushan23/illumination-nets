@@ -35,11 +35,14 @@ class FareMultipieLightingTripletsFrontal(data.Dataset):
         resize = 64,
         transform=None, return_paths=False):
         self.opt = opt
-        sess_img_map = self.make_dataset_same_face_diff_light_multipie(root)
+        sess_img_map = self.make_dataset_same_face_diff_light_multipie_cropped(root)
         if len(sess_img_map) == 0:
             raise(RuntimeError("Found 0 images in: " + root + "\n"
                                "Supported image extensions are: " + ",".join(IMG_EXTENSIONS)))
-        self.image_masks = self.make_dataset_mask_same_face_diff_light_multipie(root_mask)
+        if len(root_mask) == 0:
+            self.image_masks = None
+        else:
+            self.image_masks = self.make_dataset_mask_same_face_diff_light_multipie(root_mask)
         # print('Image Mask: ', self.image_masks)
         self.root = root
         self.resize = resize
@@ -72,29 +75,33 @@ class FareMultipieLightingTripletsFrontal(data.Dataset):
         data = []
         for session_name, session_val in self.images.items():
             print('Session: ', session_name)
-            current_session_mask = self.image_masks[session_name]
+            if self.image_masks != None:
+                current_session_mask = self.image_masks[session_name]
             # print('Masks: ', current_session_mask)
             for image_id, val in session_val.items():
                 # print('In ', image_id)
                 new_list = list(itertools.combinations(val, 2))
                 # print(new_list)
-                current_image_mask = current_session_mask[image_id]
-                current_image_mask = torch.tensor(self.get_image(current_image_mask, resize = resize), dtype = torch.uint8)
-                current_image_mask /= 255
+                if self.image_masks != None:
+                    current_image_mask = current_session_mask[image_id]
+                    current_image_mask = torch.tensor(self.get_image(current_image_mask, resize = resize), dtype = torch.uint8)
+                    current_image_mask /= 255
                 for data_point in new_list:
                     # print(data_point[0], data_point[1])
                     # source1 = torch.zeros((19,))
                     # source1[int(data_point[0][0])] = 1
                     source1 = int(data_point[0][0])
                     image1  = torch.tensor(self.get_image(data_point[0][1], resize = resize))
-                    image1 *= current_image_mask
+                    if self.image_masks != None: 
+                        image1 *= current_image_mask
                     # image1  = image1.permute(2, 0, 1)
                     # source2 = torch.zeros((19,))
                     # source2[int(data_point[1][0])] = 1
                     source2 = int(data_point[1][0])
                     # source2 = int(data_point[1][0])
                     image2  = torch.tensor(self.get_image(data_point[1][1], resize = resize))
-                    image2 *= current_image_mask
+                    if self.image_masks != None:
+                        image2 *= current_image_mask
                     #image2  = image2.permute(2, 0, 1)
                     #vutils.save_image(image2, 
                     #    '/nfs/bigdisk/bsonawane/dae-5-out/Test_Out.png',
@@ -229,6 +236,62 @@ class FareMultipieLightingTripletsFrontal(data.Dataset):
             # print(img_map)
         return session_maps #img_map
 
+    def make_dataset_same_face_diff_light_multipie_cropped(self, dirpath_root_list):
+        img_list = [] # list of path to images
+        ids_list = [] # list of ids of the images
+        ide_list = [] # list of expression of the images
+        idp_list = [] # list of pose/camera of the images
+        idl_list = [] # list of lighting of the images
+        session_maps = {} # list of images per session
+        # img_to_id = [] # stores main id for every image
+        print('Path:', dirpath_root_list)
+        # assert os.path.isdir(dirpath_root)
+        for dirpath_root in dirpath_root_list:
+            assert os.path.isdir(dirpath_root)
+            # img_map  = {} # maps ids to list of index in idl_list
+            # hack for finding session name
+            # Assuming directory structure
+            
+            st = dirpath_root
+            st = st[:st.rfind('_')]
+            session_name = st[st.find('session'):]
+            print('Loading:', dirpath_root, session_name)
+            for root, _, fnames in sorted(os.walk(dirpath_root)):
+                # print('ROOT:', folder)
+                for fname in fnames:
+                    # print('File: ', fname)
+                    if is_image_file(fname):
+                        ids, ide, idp, idl = self.parse_imgfilename_fare_multipie(fname)
+                        # Currently only working with pose
+                        if idp != '051':
+                            continue
+                        ids_list.append(ids)
+                        ide_list.append(ide)
+                        idp_list.append(idp)
+                        idl_list.append(idl)
+                        path_img = os.path.join(root, fname)
+                        img_list.append(path_img)
+                        # print(ids, idl)
+                        if session_name in session_maps:
+                            if (ids, ide) in session_maps[session_name]:
+                                session_maps[session_name][(ids, ide)].append([idl, path_img])
+                            else:
+                                session_maps[session_name][(ids, ide)] = [[idl, path_img]]
+                        else:
+                            session_maps[session_name] = {(ids, ide):[[idl, path_img]]}
+                        
+                        # if ids in img_map:
+                        #     img_map[ids].append((idl, path_img))
+                        # else:
+                        #     img_map[ids] = [(idl, path_img)]
+                        #img_to_id.append(ids)
+                        # img0 = self.get_image(path_img)
+                        # plt.imshow(img0)
+                        # plt.show()
+            # print(img_map)
+        return session_maps #img_map
+
+
     def get_Sample(self, filepath):
         # print(self.ids)
         # print(self.ide)
@@ -254,3 +317,102 @@ class FareMultipieLightingTripletsFrontal(data.Dataset):
         for i in range(len(self.ids)):
             if(self.ids[i] == ids and self.ide[i] == e and self.idp[i] == p and self.idl[i] == l):
                 return self.imgs[i]
+
+
+class CelebA_DataLoader(data.Dataset):
+
+    def __init__(self, dir_path, batch_size=32, resize=64, is_training=True):
+        self.dir = dir_path
+
+        self.batch_size = batch_size
+        self.resize = resize
+        self.train_image_list = self.list_dir()
+        assert len(self.train_image_list) != 0
+        self.test_image_list = self.train_image_list[int(0.7*len(self.train_image_list)):]
+        self.train_image_list = self.train_image_list[:int(0.7*len(self.train_image_list))]
+        print(len(self.train_image_list))
+        print(len(self.test_image_list))
+
+        random.shuffle(self.train_image_list)
+        random.shuffle(self.test_image_list)
+        self.is_training = is_training
+
+    def list_dir(self):
+        if os.path.isdir(self.dir):
+            folder_list = os.listdir(self.dir)
+            images_list = []
+            for folder in folder_list:
+                folder_path = os.path.join(self.dir, folder)
+                if os.path.isdir(folder_path):
+                    folder_image_list = os.listdir(os.path.join(self.dir, folder))
+                    for i in range(len(folder_image_list)):
+                        if is_image_file(folder_image_list[i]):
+                            images_list.append(os.path.join(folder, folder_image_list[i]))
+                    # images_list += folder_image_list
+            return images_list
+        else:
+            return []
+
+    def __len__(self):
+        if self.is_training:
+            return len(self.train_image_list)
+        else:
+            return len(self.test_image_list)
+
+    # def next_train(self):
+    #     """
+    #     Generate the next batch of training and validation samples
+    #     param: None
+    #     rtype: Numpy Array, dict, List(string)
+    #     """
+    #     idx = np.random.choice(np.arange(len(self.train_image_list)), self.batch_size, replace=False)
+    #     filepaths_batch = [self.train_image_list[i] for i in idx]
+    #
+    #     images = []
+    #
+    #     for img_path in filepaths_batch:
+    #         image = Image.open(os.path.join(self.dir, img_path))
+    #         image = image.convert('RGB')
+    #         image = image.resize((self.resize, self.resize), Image.ANTIALIAS)
+    #         image = image.astype(np.float32)
+    #         images.append(image)
+    #
+    #     images =  np.stack(images, axis=0)
+    #
+    #     return (np., images, 20, images)
+    #
+    # def next_test(self):
+    #     """
+    #     Generate the next batch of training and validation samples
+    #     param: None
+    #     rtype: Numpy Array, dict, List(string)
+    #     """
+    #     idx = np.random.choice(np.arange(len(self.test_image_list)), self.batch_size, replace=False)
+    #     filepaths_batch = [self.test_image_list[i] for i in idx]
+    #
+    #     images = []
+    #
+    #     for img_path in filepaths_batch:
+    #         image = Image.open(os.path.join(self.dir, img_path))
+    #         image = image.convert('RGB')
+    #         image = image.resize((self.resize, self.resize), Image.ANTIALIAS)
+    #         image = image.astype(np.float32)
+    #         images.append(image)
+    #
+    #     images = np.stack(images, axis=0)
+    #     return images
+
+    def __getitem__(self, index):
+        if self.is_training:
+            image_list = self.train_image_list
+        else:
+            image_list = self.test_image_list
+        if index < len(self.train_image_list):
+            image = Image.open(os.path.join(self.dir, image_list[index]))
+            image = image.convert('RGB')
+            image = image.resize((self.resize, self.resize), Image.ANTIALIAS)
+            image = np.array(image)
+            # image = image.astype(np.float32)
+            return (20, image, 20, image)
+        else:
+            return None, None, None, None

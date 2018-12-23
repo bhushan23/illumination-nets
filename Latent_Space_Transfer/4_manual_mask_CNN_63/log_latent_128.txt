@@ -1,0 +1,40 @@
+Namespace(batchSize=100, beta1=0.5, cuda=True, dirCheckpoints='./results_CNN_Latent_128//checkpoints/dae-2', dirDataroot='/nfs/bigmind/add_ssd/zhshu/data/Multipie/crops14/', dirImageoutput='./results_CNN_Latent_128//images/train', dirTestingoutput='./results_CNN_Latent_128//images/test', epoch_iter=600, f='', gpu_ids=0, idim=32, imgSize=64, location=0, lr=0.0002, manualSeed=None, modelPath='', nc=3, ndf=32, ngf=32, ngpu=1, niter=25, sdim=16, tdim=16, useDense=True, use_celeba=False, use_dropout=0, use_gpu=True, wdim=128, workers=8, zdim=128)
+Random Seed:  8921
+No previous model found, initializing model weight.
+0
+Loading Dataset
+Path: ['/nfs/bigmind/add_ssd/zhshu/data/Multipie/crops14/session01_crops14']
+Loading: /nfs/bigmind/add_ssd/zhshu/data/Multipie/crops14/session01_crops14 session01
+Session:  session01
+50190
+torch.Size([64, 64, 3]) torch.Size([64, 64, 3])
+Path: ['/nfs/bigmind/add_ssd/zhshu/data/Multipie/crops14/session_test_crops14']
+Loading: /nfs/bigmind/add_ssd/zhshu/data/Multipie/crops14/session_test_crops14 session_test
+Session:  session_test
+2100
+torch.Size([64, 64, 3]) torch.Size([64, 64, 3])
+Dataset Loaded
+Log done
+Namespace(batchSize=100, beta1=0.5, cuda=True, dirCheckpoints='./results_CNN_Latent_128//checkpoints/dae-2', dirDataroot='/nfs/bigmind/add_ssd/zhshu/data/Multipie/crops14/', dirImageoutput='./results_CNN_Latent_128//images/train', dirTestingoutput='./results_CNN_Latent_128//images/test', epoch_iter=600, f='', gpu_ids=0, idim=32, imgSize=64, location=0, lr=0.0002, manualSeed=None, modelPath='', nc=3, ndf=32, ngf=32, ngpu=1, niter=25, sdim=16, tdim=16, useDense=True, use_celeba=False, use_dropout=0, use_gpu=True, wdim=128, workers=8, zdim=128)
+Random Seed:  5254
+No previous model found, initializing model weight.
+0
+Loading Dataset
+Path: ['/nfs/bigmind/add_ssd/zhshu/data/Multipie/crops14/session01_crops14']
+Loading: /nfs/bigmind/add_ssd/zhshu/data/Multipie/crops14/session01_crops14 session01
+Session:  session01
+50190
+torch.Size([64, 64, 3]) torch.Size([64, 64, 3])
+Path: ['/nfs/bigmind/add_ssd/zhshu/data/Multipie/crops14/session_test_crops14']
+Loading: /nfs/bigmind/add_ssd/zhshu/data/Multipie/crops14/session_test_crops14 session_test
+Session:  session_test
+2100
+torch.Size([64, 64, 3]) torch.Size([64, 64, 3])
+Dataset Loaded
+Log done
+Namespace(batchSize=100, beta1=0.5, cuda=True, dirCheckpoints='./results_CNN_Latent_128//checkpoints/dae-2', dirDataroot='/nfs/bigmind/add_ssd/zhshu/data/Multipie/crops14/', dirImageoutput='./results_CNN_Latent_128//images/train', dirTestingoutput='./results_CNN_Latent_128//images/test', epoch_iter=600, f='', gpu_ids=0, idim=32, imgSize=64, location=0, lr=0.0002, manualSeed=None, modelPath='', nc=3, ndf=32, ngf=32, ngpu=1, niter=25, sdim=16, tdim=16, useDense=True, use_celeba=False, use_dropout=0, use_gpu=True, wdim=128, workers=8, zdim=128)
+Random Seed:  6531
+No previous model found, initializing model weight.
+0
+Loading Dataset
+Path: ['/nfs/bigmind/add_ssd/zhshu/data/Multipie/crops14/session01_crops14']
